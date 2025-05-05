@@ -15,24 +15,11 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-
-API.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      // Handle token expiration
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
 // Storyboard endpoints
 export const storyboardAPI = {
-  create: (name) => API.post('/home/', { name }),
-  rename: (id, name) => API.patch(`/home/${id}`, { name }),
-  delete: (id) => API.delete(`/home/${id}`),
+  create: (name) => API.post('/home', { name }),
+  rename: (id, name) => API.patch(`/storyboard/${id}`, { name:name }),
+  delete: (id) => API.delete(`/storyboard/${id}`),
   getAll: () => API.get('/home'),
 };
 

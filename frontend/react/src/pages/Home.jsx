@@ -85,11 +85,13 @@ const Home = () => {
 
     try {
       setIsProcessing(true);
-      // Check if the new name already exists (excluding the current storyboard if editing)
+      setError(null);
+
+      // Check for duplicate names
       const nameExists = storyboards.some(
-        (storyboard) =>
-          storyboard.name === newStoryboardName.trim() &&
-          (!editingStoryboard || storyboard.id !== editingStoryboard.id)
+        (sb) =>
+          sb.name === newStoryboardName.trim() &&
+          (!editingStoryboard || sb.id !== editingStoryboard.id)
       );
 
       if (nameExists) {
@@ -98,19 +100,36 @@ const Home = () => {
       }
 
       if (editingStoryboard) {
-        await storyboardAPI.rename(editingStoryboard.id, newStoryboardName);
+        // Rename existing storyboard
+        const response = await storyboardAPI.rename(
+          editingStoryboard.id,
+          newStoryboardName
+        );
+
+        // Update state with the renamed storyboard
+        setStoryboards((prev) =>
+          prev.map((sb) =>
+            sb.id === editingStoryboard.id
+              ? {
+                  ...sb,
+                  name: newStoryboardName,
+                  updated_at: new Date().toISOString(),
+                }
+              : sb
+          )
+        );
       } else {
-        await storyboardAPI.create(newStoryboardName);
+        // Create new storyboard
+        const response = await storyboardAPI.create(newStoryboardName);
+
+        // Add new storyboard to state
+        setStoryboards((prev) => [...prev, response.data]);
       }
 
-      // Refresh the list
-      const { data } = await storyboardAPI.getAll();
-      setStoryboards(sortStoryboards(data, sortMode));
       setShowModal(false);
-      setError(null);
     } catch (error) {
       console.error("Operation failed:", error);
-      setError(error.response?.data?.detail || "Failed to save storyboard");
+      setError(error.response?.data?.detail || "Operation failed");
     } finally {
       setIsProcessing(false);
     }
@@ -124,30 +143,29 @@ const Home = () => {
   };
   const deleteStoryboard = async () => {
     try {
-      // Get the storyboard element to animate
+      setIsProcessing(true);
+
+      // Optional: Get the storyboard element to animate
       const storyboardElement = document.getElementById(
         `storyboard-${deleteConfirmation.storyboardId}`
       );
 
       if (storyboardElement) {
-        // Apply implode animation
         storyboardElement.classList.add("implode-animation");
-
-        // Wait for animation to complete before proceeding
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
       await storyboardAPI.delete(deleteConfirmation.storyboardId);
-      const { data } = await storyboardAPI.getAll();
-      setStoryboards(data);
+
+      // Optimistic update - remove from state immediately
+      setStoryboards((prev) =>
+        prev.filter((sb) => sb.id !== deleteConfirmation.storyboardId)
+      );
     } catch (error) {
       console.error("Delete failed:", error);
-      setError("Failed to delete storyboard");
-      // Remove animation class if deletion failed
-      document
-        .getElementById(`storyboard-${deleteConfirmation.storyboardId}`)
-        ?.classList.remove("implode-animation");
+      setError(error.response?.data?.detail || "Failed to delete storyboard");
     } finally {
+      setIsProcessing(false);
       setDeleteConfirmation({
         show: false,
         storyboardId: null,
@@ -301,7 +319,9 @@ const Home = () => {
               className="flex flex-col group transition-all duration-200 origin-center"
             >
               <div
-                onClick={() => navigateToStoryboard(storyboard.id, storyboard.name)}
+                onClick={() =>
+                  navigateToStoryboard(storyboard.id, storyboard.name)
+                }
                 className="aspect-video w-full rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative bg-white"
               >
                 <img
