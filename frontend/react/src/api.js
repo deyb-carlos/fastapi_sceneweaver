@@ -15,6 +15,19 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+
+API.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // Handle token expiration
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Storyboard endpoints
 export const storyboardAPI = {
   create: (name) => API.post('/home/', { name }),
