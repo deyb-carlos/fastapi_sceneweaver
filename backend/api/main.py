@@ -142,12 +142,12 @@ def create_storyboard(
         )
 
 
-@app.patch("/home/{storyboard_id}/{name}", response_model=StoryboardOut)
+@app.patch("/storyboard/{storyboard_id}")
 def rename_storyboard(
     storyboard_id: int,
     storyboard: StoryboardCreateNoOwner,
     db: Session = Depends(database.get_db),
-    token: str = Depends(auth.oauth2_scheme),
+    token: str = Depends(auth.oauth2_scheme)
 ):
     try:
         # Verify token and get current user
@@ -167,7 +167,7 @@ def rename_storyboard(
         if not db_storyboard:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Storyboard not found or not owned by user",
+                detail="Storyboard not found or not owned by user"
             )
 
         # Update storyboard
@@ -182,15 +182,16 @@ def rename_storyboard(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error updating storyboard: {str(e)}",
+            detail=f"Error updating storyboard: {str(e)}"
         )
+        
 
 
-@app.delete("/home/{storyboard_id}/{name}")
+@app.delete("/storyboard/{storyboard_id}")
 def delete_storyboard(
     storyboard_id: int,
     db: Session = Depends(database.get_db),
-    token: str = Depends(auth.oauth2_scheme),
+    token: str = Depends(auth.oauth2_scheme)
 ):
     try:
         # Verify token and get current user
@@ -210,7 +211,7 @@ def delete_storyboard(
         if not db_storyboard:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Storyboard not found or not owned by user",
+                detail="Storyboard not found or not owned by user"
             )
 
         db.delete(db_storyboard)
@@ -221,7 +222,7 @@ def delete_storyboard(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error deleting storyboard: {str(e)}",
+            detail=f"Error deleting storyboard: {str(e)}"
         )
 
 
