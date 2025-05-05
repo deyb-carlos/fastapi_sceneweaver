@@ -75,8 +75,8 @@ const Home = () => {
   };
 
   // Navigation
-  const navigateToStoryboard = (id) => {
-    navigate(`/storyboard/${id}`);
+  const navigateToStoryboard = (id, name) => {
+    navigate(`/storyboard/${id}/${encodeURIComponent(name)}`);
   };
 
   // Storyboard operations
@@ -301,7 +301,7 @@ const Home = () => {
               className="flex flex-col group transition-all duration-200 origin-center"
             >
               <div
-                onClick={() => navigateToStoryboard(storyboard.id)}
+                onClick={() => navigateToStoryboard(storyboard.id, storyboard.name)}
                 className="aspect-video w-full rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative bg-white"
               >
                 <img

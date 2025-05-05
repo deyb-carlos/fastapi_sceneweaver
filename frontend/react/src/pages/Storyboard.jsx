@@ -1,4 +1,4 @@
-import React, { useState,useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 const Storyboard = () => {
   const captionNo = 32;
@@ -6,7 +6,7 @@ const Storyboard = () => {
   const [chunks, setChunks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const textareaRef = useRef(null);
+
   const chunkText = (text) => {
     const chunkSize = Math.ceil(text.length / captionNo);
     const result = [];
@@ -58,12 +58,7 @@ const Storyboard = () => {
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, []);
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"; // reset first
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [userInput]);
+
   return (
     <div className="min-h-screen bg-white font-sans relative">
       {/* Sidebar */}
@@ -147,14 +142,14 @@ const Storyboard = () => {
           className="max-w-3xl mx-auto flex items-end relative"
         >
           <textarea
-            ref={textareaRef}
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Send a message..."
-            className="flex-grow resize-none overflow-hidden p-3 pr-12 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-800 max-h-60"
             rows={1}
+            className="flex-grow resize-none p-3 pr-12 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-800"
           />
 
+          {/* Send Button */}
           <button
             type="submit"
             className="absolute right-4 bottom-3 text-gray-600 hover:text-black transition-colors"
