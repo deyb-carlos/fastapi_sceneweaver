@@ -142,7 +142,7 @@ def create_storyboard(
         )
 
 
-@app.patch("/home/{storyboard_id}", response_model=StoryboardOut)
+@app.patch("/home/{storyboard_id}/{name}", response_model=StoryboardOut)
 def rename_storyboard(
     storyboard_id: int,
     storyboard: StoryboardCreateNoOwner,
@@ -186,7 +186,7 @@ def rename_storyboard(
         )
 
 
-@app.delete("/home/{storyboard_id}")
+@app.delete("/home/{storyboard_id}/{name}")
 def delete_storyboard(
     storyboard_id: int,
     db: Session = Depends(database.get_db),
@@ -254,4 +254,41 @@ def get_user_storyboards(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching storyboards: {str(e)}",
+        )
+
+@app.get("/storyboard/{storyboard_id}/{name}", response_model=StoryboardOut)
+def get_storyboard(
+    storyboard_id: int,
+    name: str,
+    db: Session = Depends(database.get_db),
+    token: str = Depends(auth.oauth2_scheme)
+):
+    try:
+        # Verify token and get current user
+        username = auth.verify_token_string(token)
+        user = auth.get_user_by_username(db, username)
+
+        # Get the storyboard
+        db_storyboard = (
+            db.query(models.Storyboard)
+            .filter(
+                models.Storyboard.id == storyboard_id,
+                models.Storyboard.owner_id == user.id,
+                models.Storyboard.name == name
+            )
+            .first()
+        )
+
+        if not db_storyboard:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Storyboard not found or not owned by user"
+            )
+
+        return db_storyboard
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching storyboard: {str(e)}"
         )
