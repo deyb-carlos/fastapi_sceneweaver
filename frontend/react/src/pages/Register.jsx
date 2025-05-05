@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Register() {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -14,42 +16,37 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    switch (name) {
-      case "username":
-        setUsername(value);
-        break;
-      case "email":
-        setEmail(value);
-        break;
-      case "password":
-        setPassword(value);
-        break;
-      case "confirmPassword":
-        setConfirmPassword(value);
-        break;
-      default:
-        break;
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
-  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   const validateForm = () => {
     const newErrors = [];
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-    if (!username) newErrors.push("Username is required.");
-    if (!email) newErrors.push("Email is required.");
-    if (!password) newErrors.push("Password is required.");
-    if (!confirmPassword) newErrors.push("Confirm Password is required.");
-    if (username.length < 3)
+    if (!formData.username.trim()) {
+      newErrors.push("Username is required.");
+    } else if (formData.username.length < 3) {
       newErrors.push("Username must be at least 3 characters long.");
-    if (password.length < 8)
-      newErrors.push("Password must be at least 8 characters long.");
+    }
 
-    if (email && !emailPattern.test(email)) {
+    if (!formData.email.trim()) {
+      newErrors.push("Email is required.");
+    } else if (!emailPattern.test(formData.email)) {
       newErrors.push("Invalid email format.");
     }
 
-    if (password && confirmPassword && password !== confirmPassword) {
+    if (!formData.password) {
+      newErrors.push("Password is required.");
+    } else if (formData.password.length < 8) {
+      newErrors.push("Password must be at least 8 characters long.");
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.push("Confirm Password is required.");
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.push("Passwords do not match.");
     }
 
@@ -59,15 +56,11 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors([]);
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-
-    const formDetails = {
-      username,
-      email,
-      password,
-    };
 
     try {
       const response = await fetch("http://localhost:8000/register", {
@@ -75,26 +68,56 @@ function Register() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formDetails),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
       });
+
+      const responseData = await response.json();
 
       if (response.ok) {
         setSuccess("Registration successful! Redirecting to login...");
-        setTimeout(() => {
-          navigate("/login");
-        }, 2000);
+        setTimeout(() => navigate("/login"), 2000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || "Registration failed. Please try again.");
+        if (response.status === 400) {
+          if (responseData.detail === "Username already registered") {
+            setErrors((prev) => [
+              ...prev,
+              "Username is already taken. Please choose another.",
+            ]);
+          } else if (responseData.detail === "Email already exists") {
+            setErrors((prev) => [
+              ...prev,
+              "Email is already registered. Please use another email.",
+            ]);
+          } else if (Array.isArray(responseData.detail)) {
+            // Handle multiple validation errors from backend
+            setErrors(responseData.detail.map((err) => err.msg || err));
+          } else {
+            // Handle other error messages
+            setErrors((prev) => [
+              ...prev,
+              responseData.detail || "Registration failed",
+            ]);
+          }
+        } else {
+          setErrors((prev) => [
+            ...prev,
+            "Registration failed. Please try again later.",
+          ]);
+        }
       }
     } catch (error) {
-      setIsLoading(false);
-      setError("An error occurred. Please try again later.");
+      setErrors((prev) => [
+        ...prev,
+        "Network error. Please check your connection and try again.",
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="bg-black flex flex-col min-h-screen items-center justify-center text-white">
       <title>Register</title>
@@ -136,9 +159,8 @@ function Register() {
             <input
               type="text"
               name="username"
-              value={username}
+              value={formData.username}
               onChange={handleChange}
-              required
               autoComplete="off"
               placeholder=" "
               className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-white transition-colors"
@@ -155,9 +177,8 @@ function Register() {
             <input
               type="email"
               name="email"
-              value={email}
+              value={formData.email}
               onChange={handleChange}
-              required
               autoComplete="off"
               placeholder=" "
               className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-white transition-colors"
@@ -174,9 +195,8 @@ function Register() {
             <input
               type="password"
               name="password"
-              value={password}
+              value={formData.password}
               onChange={handleChange}
-              required
               autoComplete="off"
               placeholder=" "
               className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-1 focus:outline-none focus:border-white transition-colors"
@@ -193,9 +213,8 @@ function Register() {
             <input
               type="password"
               name="confirmPassword"
-              value={confirmPassword}
+              value={formData.confirmPassword}
               onChange={handleChange}
-              required
               autoComplete="off"
               placeholder=" "
               className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-1 focus:outline-none focus:border-white transition-colors"
