@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from database import SessionLocal, engine, Base
+from datetime import datetime, timezone
 import models
 
 
@@ -36,6 +37,16 @@ class Image(Base):
     caption = Column(String)
 
     storyboard = relationship("Storyboard", back_populates="owner_images")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    token = Column(String, unique=True, index=True)
+    expires_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
 
 models.Base.metadata.create_all(bind=engine)

@@ -67,12 +67,6 @@ function Login() {
           <h2 className="text-2xl font-bold text-center">Sign in</h2>
         </div>
 
-        {error && (
-          <div className="bg-red-100 text-red-600 p-3 mb-4 rounded text-left">
-            {error}
-          </div>
-        )}
-
         <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="relative w-full">
             <input
@@ -80,7 +74,6 @@ function Login() {
               name="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              required
               autoComplete="off"
               placeholder=" "
               className="peer w-full bg-white border border-gray-300 text-gray-800 placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-black transition-colors"
@@ -99,7 +92,6 @@ function Login() {
               name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               autoComplete="off"
               placeholder=" "
               className="peer w-full bg-white border border-gray-300 text-gray-800 placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-black transition-colors"
@@ -119,7 +111,11 @@ function Login() {
               </u>
             </a>
           </div>
-
+          {error && (
+            <div className="text-red-600 p-0  rounded text-left">
+              {error}
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
