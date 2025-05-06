@@ -8,10 +8,19 @@ function Register() {
     password: "",
     confirmPassword: "",
   });
-  const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [isChecked, setIsChecked] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    policy: "",
+    general: "",
+  });
 
   const navigate = useNavigate();
 
@@ -21,47 +30,69 @@ function Register() {
       ...prev,
       [name]: value,
     }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const validateForm = () => {
-    const newErrors = [];
+    let isValid = true;
+    const newErrors = {
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      policy: "",
+      general: "",
+    };
+
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     if (!formData.username.trim()) {
-      newErrors.push("Username is required.");
+      newErrors.username = "Username is required.";
+      isValid = false;
     } else if (formData.username.length < 3) {
-      newErrors.push("Username must be at least 3 characters long.");
+      newErrors.username = "Username must be at least 3 characters long.";
+      isValid = false;
     }
 
     if (!formData.email.trim()) {
-      newErrors.push("Email is required.");
+      newErrors.email = "Email is required.";
+      isValid = false;
     } else if (!emailPattern.test(formData.email)) {
-      newErrors.push("Invalid email format.");
+      newErrors.email = "Invalid email format.";
+      isValid = false;
     }
 
     if (!formData.password) {
-      newErrors.push("Password is required.");
+      newErrors.password = "Password is required.";
+      isValid = false;
     } else if (formData.password.length < 8) {
-      newErrors.push("Password must be at least 8 characters long.");
+      newErrors.password = "Password must be at least 8 characters long.";
+      isValid = false;
     }
 
     if (!formData.confirmPassword) {
-      newErrors.push("Confirm Password is required.");
+      newErrors.confirmPassword = "Confirm password is required.";
+      isValid = false;
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.push("Passwords do not match.");
+      newErrors.confirmPassword = "Passwords do not match.";
+      isValid = false;
     }
 
     if (!isChecked) {
-      newErrors.push("Privacy policy is unchecked.");
+      newErrors.policy = "You must accept the privacy policy.";
+      isValid = false;
     }
 
     setErrors(newErrors);
-    return newErrors.length === 0;
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrors([]);
+    setErrors({ ...errors, general: "" }); // Clear previous general error
 
     if (!validateForm()) return;
 
@@ -88,41 +119,44 @@ function Register() {
       } else {
         if (response.status === 400) {
           if (responseData.detail === "Username already registered") {
-            setErrors((prev) => [
+            setErrors((prev) => ({
               ...prev,
-              "Username is already taken. Please choose another.",
-            ]);
+              username: "Username is already taken. Please choose another.",
+            }));
           } else if (responseData.detail === "Email already exists") {
-            setErrors((prev) => [
+            setErrors((prev) => ({
               ...prev,
-              "Email is already registered. Please use another email.",
-            ]);
+              email: "Email is already registered. Please use another email.",
+            }));
           } else if (Array.isArray(responseData.detail)) {
             // Handle multiple validation errors from backend
-            setErrors(responseData.detail.map((err) => err.msg || err));
-          } else {
-            // Handle other error messages
-            setErrors((prev) => [
+            setErrors((prev) => ({
               ...prev,
-              responseData.detail || "Registration failed",
-            ]);
+              general: responseData.detail.join(", "),
+            }));
+          } else {
+            setErrors((prev) => ({
+              ...prev,
+              general: responseData.detail || "Registration failed",
+            }));
           }
         } else {
-          setErrors((prev) => [
+          setErrors((prev) => ({
             ...prev,
-            "Registration failed. Please try again later.",
-          ]);
+            general: "Registration failed. Please try again later.",
+          }));
         }
       }
     } catch (error) {
-      setErrors((prev) => [
+      setErrors((prev) => ({
         ...prev,
-        "Network error. Please check your connection and try again.",
-      ]);
+        general: "Network error. Please check your connection and try again.",
+      }));
     } finally {
       setIsLoading(false);
     }
   };
+
   return (
     <div className="bg-black flex flex-col min-h-screen items-center justify-center text-white">
       <title>Register</title>
@@ -149,87 +183,193 @@ function Register() {
           </div>
         )}
 
-        {errors.length > 0 && (
-          <div className="w-full bg-red-500/20 text-red-300 p-3 mb-4 rounded-md">
-            <ul className="list-inside space-y-1">
-              {errors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <form className="w-full flex flex-col gap-6" onSubmit={handleSubmit}>
+        <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="relative w-full">
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              autoComplete="off"
-              placeholder=" "
-              className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-white transition-colors"
-            />
-            <label
-              htmlFor="username"
-              className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
-            >
-              Username
-            </label>
+            <div className="relative">
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                autoComplete="off"
+                placeholder=" "
+                className={`peer w-full bg-transparent border ${
+                  errors.username ? "border-red-400" : "border-gray-500"
+                } text-white placeholder-transparent rounded-md px-3 pt-3 pb-2 focus:outline-none focus:border-white transition-colors`}
+              />
+              <label
+                htmlFor="username"
+                className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
+              >
+                Username
+              </label>
+            </div>
+            {errors.username && (
+              <div className="mt-1 text-red-400 text-sm">{errors.username}</div>
+            )}
           </div>
 
           <div className="relative w-full">
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              autoComplete="off"
-              placeholder=" "
-              className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-white transition-colors"
-            />
-            <label
-              htmlFor="email"
-              className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
-            >
-              Email
-            </label>
+            <div className="relative">
+              <input
+                type="text"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="off"
+                placeholder=" "
+                className={`peer w-full bg-transparent border ${
+                  errors.email ? "border-red-400" : "border-gray-500"
+                } text-white placeholder-transparent rounded-md px-3 pt-3 pb-2 focus:outline-none focus:border-white transition-colors`}
+              />
+              <label
+                htmlFor="email"
+                className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
+              >
+                Email
+              </label>
+            </div>
+            {errors.email && (
+              <div className="mt-1 text-red-400 text-sm">{errors.email}</div>
+            )}
           </div>
 
           <div className="relative w-full">
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              autoComplete="off"
-              placeholder=" "
-              className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-1 focus:outline-none focus:border-white transition-colors"
-            />
-            <label
-              htmlFor="password"
-              className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
-            >
-              Password
-            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="off"
+                placeholder=" "
+                className={`peer w-full bg-transparent border ${
+                  errors.password ? "border-red-400" : "border-gray-500"
+                } text-white placeholder-transparent rounded-md px-3 pt-3 pb-2 focus:outline-none focus:border-white transition-colors`}
+              />
+              <label
+                htmlFor="password"
+                className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
+              >
+                Password
+              </label>
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {errors.password && (
+              <div className="mt-1 text-red-400 text-sm">{errors.password}</div>
+            )}
           </div>
 
           <div className="relative w-full">
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              autoComplete="off"
-              placeholder=" "
-              className="peer w-full bg-transparent border border-gray-500 text-white placeholder-transparent rounded-md px-3 pt-4 pb-1 focus:outline-none focus:border-white transition-colors"
-            />
-            <label
-              htmlFor="confirmPassword"
-              className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
-            >
-              Confirm Password
-            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                autoComplete="off"
+                placeholder=" "
+                className={`peer w-full bg-transparent border ${
+                  errors.confirmPassword ? "border-red-400" : "border-gray-500"
+                } text-white placeholder-transparent rounded-md px-3 pt-4 pb-2 focus:outline-none focus:border-white transition-colors`}
+              />
+              <label
+                htmlFor="confirmPassword"
+                className="absolute left-3 top-0 -translate-y-1/2 px-1 text-sm bg-black text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:bg-transparent peer-placeholder-shown:text-gray-500 peer-focus:top-0 peer-focus:text-sm peer-focus:text-white peer-focus:bg-black"
+              >
+                Confirm Password
+              </label>
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {errors.confirmPassword && (
+              <div className="mt-1 text-red-400 text-sm">
+                {errors.confirmPassword}
+              </div>
+            )}
           </div>
 
           <div className="relative w-full ml-3">
@@ -245,13 +385,18 @@ function Register() {
                 <u>Privacy policy</u>
               </a>
             </label>
+            {errors.policy && (
+              <div className="mt-1 text-red-400 text-sm">{errors.policy}</div>
+            )}
           </div>
-
+          {errors.general && (
+            <div className="mt-1 text-red-400 text-sm">{errors.general}</div>
+          )}
           <div className="w-full flex flex-col items-center ">
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-white text-black border-2 border-black py-2 rounded-md font-semibold hover:bg-gray-100 transition-colors ${
+              className={`w-full bg-white text-black border-2 border-black py-2 rounded-md font-semibold hover:bg-gray-300 transition-colors ${
                 isLoading ? "opacity-70 cursor-not-allowed" : ""
               }`}
             >
