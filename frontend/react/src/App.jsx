@@ -6,7 +6,7 @@ import Landing from "./pages/Landing";
 import Register from "./pages/Register";
 import Storyboard from "./pages/Storyboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -32,6 +32,7 @@ function App() {
           }
         />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </Router>
   );
