@@ -1,8 +1,7 @@
-// src/api.js
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8000', // Your FastAPI server
+  baseURL: 'http://localhost:8000', 
   timeout: 5000,
 });
 
@@ -14,7 +13,55 @@ API.interceptors.request.use((config) => {
   }
   return config;
 });
+const refreshToken = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
 
+  try {
+    const response = await axios.post(
+      'http://localhost:8000/refresh-token',
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    
+    // Save new token
+    const newToken = response.data.access_token;
+    localStorage.setItem("token", newToken);
+    return newToken;
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    // If refresh fails, force logout
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+    return null;
+  }
+};
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If the error is due to an expired token (401) and we haven't tried refreshing yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Try to refresh the token
+      const newToken = await refreshToken();
+      if (newToken) {
+        // Update the Authorization header with the new token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return API(originalRequest);
+      }
+    }
+    
+    // If we couldn't refresh the token or it wasn't a 401, pass along the error
+    return Promise.reject(error);
+  }
+);
 // Storyboard endpoints
 export const storyboardAPI = {
   create: (name) => API.post('/home', { name }),
@@ -28,4 +75,10 @@ export const authAPI = {
   login: (credentials) => API.post('/token', credentials),
   register: (userData) => API.post('/register', userData),
   verify: () => API.get('/verify-token'),
+  get_current_user: () => API.get('/me'), 
+};
+
+
+export const tokenService = {
+  refreshToken,
 };

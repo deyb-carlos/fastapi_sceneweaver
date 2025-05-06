@@ -11,6 +11,7 @@ function Register() {
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState("");
+  const [isChecked, setIsChecked] = useState(false);
 
   const navigate = useNavigate();
 
@@ -48,6 +49,10 @@ function Register() {
       newErrors.push("Confirm Password is required.");
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.push("Passwords do not match.");
+    }
+
+    if (!isChecked) {
+      newErrors.push("Privacy policy is unchecked.");
     }
 
     setErrors(newErrors);
@@ -227,7 +232,22 @@ function Register() {
             </label>
           </div>
 
-          <div className="w-full flex flex-col items-center pt-4">
+          <div className="relative w-full ml-3">
+            <input
+              type="checkbox"
+              onChange={(e) => setIsChecked(e.target.checked)}
+              id="terms"
+              className="mr-2"
+            />
+            <label htmlFor="terms" className="text-sm text-gray-400">
+              By signing up, you agree to our{" "}
+              <a href="">
+                <u>Privacy policy</u>
+              </a>
+            </label>
+          </div>
+
+          <div className="w-full flex flex-col items-center ">
             <button
               type="submit"
               disabled={isLoading}

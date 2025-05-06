@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { storyboardAPI } from "../api";
+import { storyboardAPI, authAPI, tokenService } from "../api";
 
 const Home = () => {
   const navigate = useNavigate();
 
   const token = localStorage.getItem("token");
 
-  // State management
   const [storyboards, setStoryboards] = useState([]);
   const [sortMode, setSortMode] = useState("date");
   const [showModal, setShowModal] = useState(false);
@@ -15,11 +14,14 @@ const Home = () => {
   const [editingStoryboard, setEditingStoryboard] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [username, setUsername] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     show: false,
     storyboardId: null,
     storyboardName: "",
+    isDeleting: false,
   });
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   function sortStoryboards(list, mode) {
@@ -38,13 +40,12 @@ const Home = () => {
       setStoryboards(sorted);
     }
   }, [sortMode]);
-  // Fetch storyboards on component mount
+
   useEffect(() => {
     const fetchStoryboards = async () => {
       try {
         setIsLoading(true);
         const response = await storyboardAPI.getAll();
-        // Sort the storyboards after fetching
         const sortedStoryboards = sortStoryboards(
           response.data || [],
           sortMode
@@ -61,7 +62,30 @@ const Home = () => {
     fetchStoryboards();
   }, []);
 
-  // Modal handlers
+  useEffect(() => {
+    const refreshInterval = 24 * 60 * 60 * 1000;
+    tokenService.refreshToken();
+
+    const intervalId = setInterval(() => {
+      tokenService.refreshToken();
+    }, refreshInterval);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await authAPI.get_current_user();
+        setUsername(response.data.username);
+      } catch (error) {
+        console.error("Failed to fetch current user:", error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
   const openCreateModal = () => {
     setEditingStoryboard(null);
     setNewStoryboardName("");
@@ -74,12 +98,10 @@ const Home = () => {
     setShowModal(true);
   };
 
-  // Navigation
   const navigateToStoryboard = (id, name) => {
     navigate(`/storyboard/${id}/${encodeURIComponent(name)}`);
   };
 
-  // Storyboard operations
   const handleSaveStoryboard = async () => {
     if (!newStoryboardName.trim() || isProcessing) return;
 
@@ -100,13 +122,11 @@ const Home = () => {
       }
 
       if (editingStoryboard) {
-        // Rename existing storyboard
         const response = await storyboardAPI.rename(
           editingStoryboard.id,
           newStoryboardName
         );
 
-        // Update state with the renamed storyboard
         setStoryboards((prev) =>
           prev.map((sb) =>
             sb.id === editingStoryboard.id
@@ -119,17 +139,14 @@ const Home = () => {
           )
         );
       } else {
-        // Create new storyboard
         const response = await storyboardAPI.create(newStoryboardName);
-
-        // Add new storyboard to state
-        setStoryboards((prev) => [...prev, response.data]);
+        setStoryboards((prev) => [response.data, ...prev]);
       }
 
       setShowModal(false);
     } catch (error) {
       console.error("Operation failed:", error);
-      setError(error.response?.data?.detail || "Operation failed");
+      setError("Operation failed");
     } finally {
       setIsProcessing(false);
     }
@@ -141,11 +158,14 @@ const Home = () => {
       storyboardName: name,
     });
   };
+
   const deleteStoryboard = async () => {
     try {
-      setIsProcessing(true);
+      setDeleteConfirmation((prev) => ({
+        ...prev,
+        isDeleting: true,
+      }));
 
-      // Optional: Get the storyboard element to animate
       const storyboardElement = document.getElementById(
         `storyboard-${deleteConfirmation.storyboardId}`
       );
@@ -157,34 +177,35 @@ const Home = () => {
 
       await storyboardAPI.delete(deleteConfirmation.storyboardId);
 
-      // Optimistic update - remove from state immediately
       setStoryboards((prev) =>
         prev.filter((sb) => sb.id !== deleteConfirmation.storyboardId)
       );
     } catch (error) {
       console.error("Delete failed:", error);
-      setError(error.response?.data?.detail || "Failed to delete storyboard");
+      setError("Failed to delete storyboard");
     } finally {
-      setIsProcessing(false);
       setDeleteConfirmation({
         show: false,
         storyboardId: null,
         storyboardName: "",
+        isDeleting: false,
       });
     }
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col justify-center items-center">
-        {/* Logo */}
         <img
           src="/sw-logo.png"
           alt="Logo"
           className="h-16 mb-8" // Adjust size as needed
         />
 
-        {/* Loading spinner */}
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
           <p className="mt-4 text-gray-600">Loading storyboards...</p>
@@ -194,7 +215,7 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center">
       <title>Home</title>
 
       {/* Navbar */}
@@ -204,7 +225,7 @@ const Home = () => {
             <img src="/sw-logo.png" alt="Logo" className="h-8" />
           </div>
           <button
-            onClick={() => navigate("/login")}
+            onClick={handleLogout}
             className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-1 rounded-md transition-colors flex items-center"
           >
             <svg
@@ -227,14 +248,17 @@ const Home = () => {
       </nav>
 
       {/* Main Content */}
-      <div className="pt-20 mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8 pb-8">
+      <div className="pt-20 mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8 pb-8 flex-1 w-full">
         <div className="mb-8 pt-10 flex justify-between items-center">
-          <h1 className="text-6xl font-bold text-gray-900">Storyboards</h1>
+          {username && (
+            <h1 className="text-6xl font-bold text-gray-900">
+              {username}'s Storyboards
+            </h1>
+          )}
           <div className="flex space-x-2">
             <button
               onClick={() => {
                 setSortMode("az");
-
                 setStoryboards(sortStoryboards(storyboards, "az"));
               }}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -304,7 +328,7 @@ const Home = () => {
                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                   />
                 </svg>
-                <span className="mt-2 text-gray-600 font-medium">
+                <span className="mt-2 text-gray-400 font-medium">
                   New Storyboard
                 </span>
               </div>
@@ -407,6 +431,7 @@ const Home = () => {
           ))}
         </div>
       </div>
+
       {deleteConfirmation.show && (
         <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -435,9 +460,40 @@ const Home = () => {
               </button>
               <button
                 onClick={deleteStoryboard}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                disabled={deleteConfirmation.isDeleting}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  deleteConfirmation.isDeleting
+                    ? "bg-red-300 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 text-white"
+                }`}
               >
-                Delete
+                {deleteConfirmation.isDeleting ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
               </button>
             </div>
           </div>
@@ -452,13 +508,6 @@ const Home = () => {
                 ? "Rename Storyboard"
                 : "Create New Storyboard"}
             </h2>
-
-            {/* Error message at top */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
 
             <input
               type="text"

@@ -111,6 +111,29 @@ async def verify_user_token(token: str = Depends(auth.oauth2_scheme)):
     auth.verify_token(token=token)
     return {"message": "Token is valid"}
 
+@app.get("/me")
+async def get_current_user(token: str = Depends(auth.oauth2_scheme), db: Session = Depends(database.get_db)):
+    try:
+        username = auth.verify_token_string(token)
+        user = auth.get_user_by_username(db, username)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+        }
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 @app.post("/home", response_model=StoryboardOut)
 def create_storyboard(
@@ -143,7 +166,7 @@ def create_storyboard(
                 detail="Storyboard with this name already exists",
             )
 
-        # Create new storyboard with default thumbnail
+   
         db_storyboard = models.Storyboard(
             name=storyboard.name,
             owner_id=user.id,
