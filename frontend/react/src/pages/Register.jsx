@@ -82,7 +82,7 @@ function Register() {
     }
 
     if (!isChecked) {
-      newErrors.policy = "You must accept the privacy policy.";
+      newErrors.policy = "Privacy policy is unchecked.";
       isValid = false;
     }
 
@@ -92,7 +92,7 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrors({ ...errors, general: "" }); // Clear previous general error
+    setErrors({ ...errors, general: "" });
 
     if (!validateForm()) return;
 
@@ -129,7 +129,7 @@ function Register() {
               email: "Email is already registered. Please use another email.",
             }));
           } else if (Array.isArray(responseData.detail)) {
-            // Handle multiple validation errors from backend
+          
             setErrors((prev) => ({
               ...prev,
               general: responseData.detail.join(", "),
