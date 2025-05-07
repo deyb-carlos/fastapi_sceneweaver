@@ -152,9 +152,9 @@ function Landing() {
 
         {/* Content */}
         <div className="relative z-10 text-center px-4 md:px-0 max-w-2xl">
-          <h1 className="text-3xl md:text-4xl font-bold mb-6">Lorem Ipsum</h1>
+          <h1 className="text-9xl mb-6">Create endless storyboards</h1>
           <p className="mb-6 text-sm md:text-base">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+            Visualize your stories, start simple.
           </p>
           <button
             onClick={handleGetStarted}
@@ -177,7 +177,7 @@ function Landing() {
               (img, index) => (
                 <img
                   key={index}
-                  src={`./images/${img}`}
+                  src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/106539031_p0_master1200.jpg"
                   alt={`slide${index}`}
                   className="flex-shrink-0 w-full h-full object-cover snap-start"
                 />
