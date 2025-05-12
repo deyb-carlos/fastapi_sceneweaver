@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from database import SessionLocal, engine, Base
+from database import engine, Base
 from datetime import datetime, timezone
-import models
+
 
 
 class User(Base):
@@ -13,7 +13,7 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
 
-    storyboards = relationship("Storyboard", back_populates="owner_user")
+    storyboards = relationship("Storyboard", back_populates="owner")
 
 
 class Storyboard(Base):
@@ -25,8 +25,8 @@ class Storyboard(Base):
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
-    owner_user = relationship("User", back_populates="storyboards")
-    owner_images = relationship("Image", back_populates="storyboard")
+    owner = relationship("User", back_populates="storyboards") 
+    images = relationship("Image", back_populates="storyboard")
 
 
 class Image(Base):
@@ -36,7 +36,7 @@ class Image(Base):
     image_path = Column(String)
     caption = Column(String)
 
-    storyboard = relationship("Storyboard", back_populates="owner_images")
+    storyboard = relationship("Storyboard", back_populates="images")
 
 
 class PasswordResetToken(Base):
@@ -49,4 +49,5 @@ class PasswordResetToken(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
 
-models.Base.metadata.create_all(bind=engine)
+
+Base.metadata.create_all(bind=engine)

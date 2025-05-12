@@ -56,3 +56,55 @@ label, select, option {
   animation: implode 0.2s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
   transform-origin: center;
 }
+
+.resolution-option {
+  transition: all 0.2s ease;
+}
+
+.resolution-option:hover {
+  transform: scale(1.05);
+}
+
+.resolution-option input:checked + div {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Tooltip for better UX */
+.resolution-tooltip {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.resolution-option:hover .resolution-tooltip {
+  opacity: 1;
+}
+
+.modal-enter {
+  opacity: 0;
+}
+.modal-enter-active {
+  opacity: 1;
+  transition: opacity 200ms;
+}
+.modal-exit {
+  opacity: 1;
+}
+.modal-exit-active {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+/* Prevent scrolling when modal is open */
+body.modal-open {
+  overflow: hidden;
+}

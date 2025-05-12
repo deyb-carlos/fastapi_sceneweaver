@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'http://localhost:8000', 
-  timeout: 5000,
+  timeout: 110000,
 });
 
 // Add request interceptor to inject token
@@ -78,6 +78,15 @@ export const authAPI = {
   get_current_user: () => API.get('/me'), 
 };
 
+export const imagesAPI = {
+ generateImages: (id, formData) => API.post(`/generate-images/${id}`, formData, {
+  headers: {
+    "Content-Type": "multipart/form-data"
+  }
+}), 
+getImages: (storyboardId) => API.get(`/storyboard/images/${storyboardId}`),
+
+}
 
 export const tokenService = {
   refreshToken,
