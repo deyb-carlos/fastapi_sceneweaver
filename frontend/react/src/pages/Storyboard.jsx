@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { imagesAPI } from "../api"; // Adjust the path if necessary
 
 const Storyboard = () => {
+  const navigate = useNavigate();
   const { id, name } = useParams(); // Use params directly
   const [userInput, setUserInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -172,8 +173,8 @@ const Storyboard = () => {
 
       {/* Hamburger Menu */}
       <div
-        className={`fixed top-4 left-4 z-[1002] cursor-pointer transition-all duration-300 ${
-          sidebarOpen ? "left-[254px]" : "left-4"
+        className={`fixed top-4 left-4 z-[1002] cursor-pointer transition-all duration-300 hover:bg-gray-300  ${
+          sidebarOpen ? "left-[270px]" : "left-4"
         }`}
         onClick={toggleSidebar}
       >
@@ -184,9 +185,9 @@ const Storyboard = () => {
         />
       </div>
 
-      {/* Header with Storyboard Name */}
+      {/* Header with Storyboard Name and Home Button */}
       <div
-        className={`fixed top-0 h-16 bg-white border-b border-gray-200 z-[1000] flex items-center px-4 transition-all duration-300 ${
+        className={`fixed top-0 h-16 bg-white border-b border-gray-200 z-[1000] flex items-center justify-between px-4 transition-all duration-300 ${
           sidebarOpen ? "left-[250px] right-0" : "left-0 right-0"
         }`}
       >
@@ -195,6 +196,27 @@ const Storyboard = () => {
             <span className="text-black text-4xl">{name}</span>
           </h1>
         </div>
+
+        <button
+          onClick={() => navigate("/home")}
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+          title="Home"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Main Content Area */}
@@ -220,10 +242,10 @@ const Storyboard = () => {
               rows={10}
               className="flex-grow resize-none p-3 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-800"
             />
-            <div className="mt-4">
+            <div className="mt-4 mb-7 flex justify-between items-center">
               <div className="flex gap-3">
                 {/* 1:1 Square */}
-                <label className="relative">
+                <label className="relative group">
                   <input
                     type="radio"
                     name="resolution"
@@ -233,10 +255,10 @@ const Storyboard = () => {
                     className="absolute opacity-0 w-0 h-0"
                   />
                   <div
-                    className={`w-12 h-12 p-2 border-2 rounded-lg cursor-pointer flex flex-col items-center justify-center transition-all ${
+                    className={`w-10 h-10 rounded-lg cursor-pointer flex items-center justify-center transition-all ${
                       resolution === "1:1"
-                        ? "border-black bg-gray-300"
-                        : "border-gray-400 hover:border-gray-500 bg-gray-50"
+                        ? "bg-gray-300"
+                        : "bg-gray-100 hover:bg-gray-200"
                     }`}
                   >
                     <svg
@@ -245,25 +267,21 @@ const Storyboard = () => {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                      className={`w-6 h-6 ${
-                      
+                      className={`w-5 h-5 ${
                         resolution === "1:1" ? "text-black" : "text-gray-600"
                       }`}
                     >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <rect x="5" y="5" width="15" height="15" />
                     </svg>
-                    <span
-                      className={`mt-1 text-xs font-medium ${
-                        resolution === "1:1" ? "text-black" : "text-gray-600"
-                      }`}
-                    >
+                    {/* Tooltip */}
+                    <span className="absolute -bottom-8 scale-0 rounded bg-gray-800 p-1 text-xs text-white group-hover:scale-100 transition-transform">
                       1:1
                     </span>
                   </div>
                 </label>
 
                 {/* 16:9 Widescreen */}
-                <label className="relative">
+                <label className="relative group">
                   <input
                     type="radio"
                     name="resolution"
@@ -273,10 +291,10 @@ const Storyboard = () => {
                     className="absolute opacity-0 w-0 h-0"
                   />
                   <div
-                    className={`w-12 h-12 p-2 border-2 rounded-lg cursor-pointer flex flex-col items-center justify-center transition-all ${
+                    className={`w-10 h-10 rounded-lg cursor-pointer flex items-center justify-center transition-all ${
                       resolution === "16:9"
-                        ? "border-black bg-gray-300"
-                        : "border-gray-400 hover:border-gray-500 bg-gray-50"
+                        ? "bg-gray-300"
+                        : "bg-gray-100 hover:bg-gray-200"
                     }`}
                   >
                     <svg
@@ -285,29 +303,21 @@ const Storyboard = () => {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                      className={`w-6 h-4 ${
-                        // Changed from w-8 h-5 to w-6 h-4
-                        resolution === "16:9"
-                          ? "text-black"
-                          : "text-gray-600"
+                      className={`w-5 h-3.5 ${
+                        resolution === "16:9" ? "text-black" : "text-gray-600"
                       }`}
                     >
-                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <rect x="0" y="4" width="25" height="16" />
                     </svg>
-                    <span
-                      className={`mt-1 text-xs font-medium ${
-                        resolution === "16:9"
-                          ? "text-black"
-                          : "text-gray-600"
-                      }`}
-                    >
+                    {/* Tooltip */}
+                    <span className="absolute -bottom-8 scale-0 rounded bg-gray-800 p-1 text-xs text-white group-hover:scale-100 transition-transform">
                       16:9
                     </span>
                   </div>
                 </label>
 
                 {/* 9:16 Portrait */}
-                <label className="relative">
+                <label className="relative group">
                   <input
                     type="radio"
                     name="resolution"
@@ -317,10 +327,10 @@ const Storyboard = () => {
                     className="absolute opacity-0 w-0 h-0"
                   />
                   <div
-                    className={`w-12 h-12 p-2 border-2 rounded-lg cursor-pointer flex flex-col items-center justify-center transition-all ${
+                    className={`w-10 h-10 rounded-lg cursor-pointer flex items-center justify-center transition-all ${
                       resolution === "9:16"
-                        ? "border-black bg-gray-300"
-                        : "border-gray-400 hover:border-gray-500 bg-gray-50"
+                        ? "bg-gray-300"
+                        : "bg-gray-100 hover:bg-gray-200"
                     }`}
                   >
                     <svg
@@ -329,36 +339,28 @@ const Storyboard = () => {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                      className={`w-4 h-6 ${
-                        // Changed from w-5 h-8 to w-4 h-6
-                        resolution === "9:16"
-                          ? "text-black"
-                          : "text-gray-600"
+                      className={`w-3.5 h-5 ${
+                        resolution === "9:16" ? "text-black" : "text-gray-600"
                       }`}
                     >
-                      <rect x="4" y="2" width="16" height="20" rx="2" />
+                      <rect x="4" y="0" width="16" height="25" />
                     </svg>
-                    <span
-                      className={`mt-1 text-xs font-medium ${
-                        resolution === "9:16"
-                          ? "text-black"
-                          : "text-gray-600"
-                      }`}
-                    >
+                    {/* Tooltip */}
+                    <span className="absolute -bottom-8 scale-0 rounded bg-gray-800 p-1 text-xs text-white group-hover:scale-100 transition-transform">
                       9:16
                     </span>
                   </div>
                 </label>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="mt-4 self-end bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white disabled:bg-gray-400"
-            >
-              {isGenerating ? "Generating..." : "Generate Storyboard"}
-            </button>
+              <button
+                type="submit"
+                disabled={isGenerating}
+                className="bg-black hover:bg-gray-500 px-4 py-2 rounded-lg cursor-pointer text-white hover:text-gray-700 disabled:bg-gray-400"
+              >
+                {isGenerating ? "Generating..." : "Generate"}
+              </button>
+            </div>
           </form>
         </div>
         {/* Image Modal */}
@@ -428,7 +430,7 @@ const Storyboard = () => {
                 .slice(currentIndex, currentIndex + 6)
                 .map((image, i) => (
                   <div key={i} className="flex flex-col">
-                    {/* Square Image Container - now clickable */}
+                    {/* Square Image Container */}
                     <div
                       className="aspect-square overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => setSelectedImage(image)}
@@ -439,10 +441,15 @@ const Storyboard = () => {
                         className="object-cover w-full h-full"
                       />
                     </div>
-                    {/* Text Below */}
-                    <div className="mt-2 p-2 text-gray-800 font-semibold text-sm bg-white rounded-lg border border-gray-100">
-                      <p className="text-xs">Caption {currentIndex + i + 1}:</p>
-                      <p className="font-normal">{image.caption}</p>
+
+                    {/* Updated Caption Container */}
+                    <div className="mt-2 p-2 text-gray-800 font-semibold text-sm bg-white rounded-lg border border-gray-100 min-h-[60px] max-h-[100px] overflow-y-auto">
+                      <p className="text-xs mb-1">
+                        Caption {currentIndex + i + 1}:
+                      </p>
+                      <p className="font-normal text-sm break-words whitespace-normal">
+                        {image.caption}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -456,9 +463,9 @@ const Storyboard = () => {
         <>
           <button
             onClick={handlePrev}
-            className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
+            className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500  text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
               sidebarOpen
-                ? "left-[calc(30%+250px+20px)]"
+                ? "left-[calc(30%+180px+20px)]"
                 : "left-[calc(30%+20px)]"
             }`}
           >
@@ -479,7 +486,7 @@ const Storyboard = () => {
           </button>
           <button
             onClick={handleNext}
-            className={`fixed right-4 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
+            className={`fixed right-4 top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
               sidebarOpen ? "right-4" : "right-4"
             }`}
           >

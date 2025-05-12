@@ -2,7 +2,6 @@ import spacy
 from fastcoref import FCoref
 from typing import List
 import re
-
 from googletrans import Translator
 
 nlp = spacy.load("en_core_web_lg")

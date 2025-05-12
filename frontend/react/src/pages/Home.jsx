@@ -249,13 +249,16 @@ const Home = () => {
 
       {/* Main Content */}
       <div className="pt-20 mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8 pb-8 flex-1 w-full">
-        <div className="mb-8 pt-10 flex justify-between items-center">
+        {/* Header Section - Modified for mobile */}
+        <div className="mb-8 pt-10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           {username && (
-            <h1 className="text-6xl font-bold text-gray-900">
+            <h1 className="text-4xl sm:text-6xl font-bold text-gray-900">
               {username}'s Storyboards
             </h1>
           )}
-          <div className="flex space-x-2">
+
+          {/* Sort Buttons - Now below on mobile */}
+          <div className="flex space-x-2 sm:self-center">
             <button
               onClick={() => {
                 setSortMode("az");
