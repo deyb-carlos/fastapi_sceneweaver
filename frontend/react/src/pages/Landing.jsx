@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-
 function Landing() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -55,7 +54,7 @@ function Landing() {
             </button>
             <button
               onClick={handleGetStarted}
-              className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold hover:bg-blue-700"
+              className="bg-black text-white px-4 py-2 rounded-full font-bold hover:bg-gray-900"
             >
               Get Started
             </button>
@@ -127,7 +126,7 @@ function Landing() {
               </button>
               <button
                 onClick={handleGetStarted}
-                className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold hover:bg-blue-700"
+                className="bg-black text-white px-4 py-2 rounded-full font-bold hover:bg-gray-900"
               >
                 Get Started
               </button>
@@ -144,21 +143,23 @@ function Landing() {
         {/* Background Image Container - Now properly contained within section */}
         <div className="absolute inset-0 z-0">
           <img
-            src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/landing/storyboarding.jpg"
+            src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/cc3112fdb4fb4e342d2791ac23c75012.png"
             alt="Background"
-            className="w-full h-full object-cover opacity-30"
+            className="w-full h-full object-cover opacity-20"
           />
         </div>
 
         {/* Content */}
-        <div className="relative z-10 text-center px-4 md:px-0 max-w-2xl">
-          <h1 className="text-9xl mb-6">Create endless storyboards</h1>
-          <p className="mb-6 text-sm md:text-base">
+        <div className="relative z-10 text-center px-4 md:px-0 max-w-8xl">
+          <h1 className="text-white text-shadow text-[12rem] mb-6 w-full tracking-tight leading-none font-mont">
+            Create endless <br/>storyboards
+          </h1>
+          <p className="mb-6 text-3xl mt-50">
             Visualize your stories, start simple.
           </p>
           <button
             onClick={handleGetStarted}
-            className="bg-blue-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-bold hover:bg-blue-700"
+            className="bg-black text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-bold hover:bg-gray-900"
           >
             Get Started
           </button>

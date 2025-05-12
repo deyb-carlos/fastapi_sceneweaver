@@ -35,20 +35,11 @@ class StoryboardOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
 class StoryboardCreateNoOwner(BaseModel):
     name: str  # Used in the new endpoints
 
-
 class ImageCreate(BaseModel):
     storyboard_id: int
-
-
-class ResetTokenCreate(BaseModel):
-    email: EmailStr
-    token: str
-    expires_at: datetime
-
 
 class ImageOut(BaseModel):
     id: int
@@ -58,3 +49,11 @@ class ImageOut(BaseModel):
     storyboard: Optional[StoryboardOut] = None
 
     model_config = {"from_attributes": True}
+
+class ResetTokenCreate(BaseModel):
+    email: EmailStr
+    token: str
+    expires_at: datetime
+
+
+
