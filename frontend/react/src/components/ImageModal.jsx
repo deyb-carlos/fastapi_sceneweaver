@@ -18,6 +18,7 @@ const ImageModal = ({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerationError, setRegenerationError] = useState(null);
   const [currentImage, setCurrentImage] = useState(initialImage);
+  const [imageWidth, setImageWidth] = useState(0);
 
   // Update local state when the initialImage prop changes
   useEffect(() => {
@@ -26,13 +27,16 @@ const ImageModal = ({
     setRegenerationPrompt(initialImage.caption);
   }, [initialImage]);
 
+  const handleImageLoad = (e) => {
+    setImageWidth(e.target.clientWidth);
+  };
+
   const handleRegenerate = async () => {
     try {
       setIsRegenerating(true);
       setRegenerationError(null);
 
-  
-      const seedValue = seed.trim() === '' ? null : seed;
+      const seedValue = seed.trim() === "" ? null : seed;
 
       if (!regenerationPrompt.trim()) {
         throw new Error("Prompt cannot be empty");
@@ -65,6 +69,7 @@ const ImageModal = ({
       setIsRegenerating(false);
     }
   };
+
   const handleSeedChange = (e) => {
     const value = e.target.value;
     if (value === "" || /^\d+$/.test(value)) {
@@ -80,7 +85,7 @@ const ImageModal = ({
       >
         <div className="flex justify-center items-center gap-6">
           {/* Image Container */}
-          <div className="relative bg-white rounded-lg overflow-hidden shadow-xl">
+          <div className="relative bg-white rounded-lg overflow-hidden shadow-xl max-w-full flex flex-col">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 z-10"
               onClick={onClose}
@@ -148,10 +153,14 @@ const ImageModal = ({
               src={currentImage.image_path}
               alt="Enlarged storyboard image"
               className="w-full h-auto max-h-[70vh] object-contain"
+              onLoad={handleImageLoad}
             />
 
             {/* Caption Section */}
-            <div className="p-4 bg-white relative">
+            <div 
+              className="p-4 bg-white w-full box-border relative"
+              style={{ maxWidth: `${imageWidth}px` }}
+            >
               <p className="font-semibold text-gray-500 mb-2">Caption:</p>
               {isEditingCaption ? (
                 <>
@@ -218,9 +227,9 @@ const ImageModal = ({
                 </>
               ) : (
                 <>
-                  <p className="text-gray-700 break-words whitespace-normal pr-10">
+                  <div className="text-gray-700 break-words whitespace-normal pr-10 overflow-hidden">
                     {currentImage.caption}
-                  </p>
+                  </div>
                   <button
                     className="absolute right-4 bottom-4 text-gray-500 hover:text-black"
                     onClick={() => setIsEditingCaption(true)}
@@ -250,7 +259,7 @@ const ImageModal = ({
             <h3 className="font-semibold text-white mb-3">Regenerate Image</h3>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-500 ">
+              <label className="block text-sm font-medium text-gray-500">
                 Prompt:
               </label>
               <textarea
@@ -260,7 +269,6 @@ const ImageModal = ({
                 rows={3}
                 style={{ height: "80px" }}
               />
-     
             </div>
 
             <div className="mb-4 flex flex-col">

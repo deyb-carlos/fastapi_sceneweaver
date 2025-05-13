@@ -41,7 +41,7 @@ const ImageGrid = ({
               No Storyboard Images Yet
             </h2>
             <p className="text-gray-500 mb-6">
-              Enter your story in the left panel and click "Generate Storyboard" to create your first
+              Enter your story in the left panel and click "Generate" to create your first
               storyboard images.
             </p>
           </div>
