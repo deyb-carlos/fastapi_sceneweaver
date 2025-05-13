@@ -4,7 +4,7 @@ from PIL import Image
 from io import BytesIO
 import models
 from database import SessionLocal
-from text_processor import get_resolved_sentences
+from text_processor import get_resolved_sentences, detect_and_translate_to_english
 from s3 import upload_image_to_s3
 import random
 
@@ -65,7 +65,9 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
             buf.seek(0)
 
             s3_url = upload_image_to_s3(
-                buf.read(), f"image_{num + 1}.jpg", folder=f"storyboards/{storyboard_id}"
+                buf.read(),
+                f"image_{num + 1}.jpg",
+                folder=f"storyboards/{storyboard_id}",
             )
 
             db_image = models.Image(
@@ -73,7 +75,9 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
             )
             db.add(db_image)
             db.commit()  # Commit after each image
-            db.refresh(db_image)  # Optional, in case you want to return/use it immediately
+            db.refresh(
+                db_image
+            )  # Optional, in case you want to return/use it immediately
 
     except Exception as e:
         print(f"Error during image generation: {e}")
@@ -87,16 +91,18 @@ def generate_single_image(image_id: int, caption: str, seed: int = None):
     try:
         # Get existing image record
         db_image = db.query(models.Image).filter(models.Image.id == image_id).first()
-
+        processed_caption = detect_and_translate_to_english(caption)
         seed = seed if seed is not None else random.randint(0, 2**32 - 1)
-        gen = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(seed)
+        gen = torch.Generator(
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        ).manual_seed(seed)
 
         if not db_image:
             raise ValueError(f"Image with id {image_id} not found.")
 
         # Generate image
         result = pipe(
-            prompt=f"Storyboard sketch of {caption}, black and white, cinematic, high quality",
+            prompt=f"Storyboard sketch of {processed_caption}, black and white, cinematic, high quality",
             negative_prompt="ugly, deformed, disfigured, poor details, bad anatomy, abstract, bad physics",
             guidance_scale=8.5,
             num_inference_steps=30,
@@ -113,7 +119,7 @@ def generate_single_image(image_id: int, caption: str, seed: int = None):
         s3_url = upload_image_to_s3(
             buf.read(),
             f"image_{image_id}.jpg",
-            folder=f"storyboards/{db_image.storyboard_id}"
+            folder=f"storyboards/{db_image.storyboard_id}",
         )
 
         # Update image record
@@ -129,6 +135,3 @@ def generate_single_image(image_id: int, caption: str, seed: int = None):
         db.rollback()
     finally:
         db.close()
-
-
-
