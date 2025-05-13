@@ -28,7 +28,7 @@ import secrets
 import string
 from reset_password import send_reset_email
 from fastapi import BackgroundTasks
-from batch_generator import generate_batch_images
+from batch_generator import generate_batch_images, generate_single_image
 from s3 import delete_image_from_s3
 
 app = FastAPI()
@@ -46,7 +46,114 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.post("/regenerate-image/{image_id}")
+async def regenerate_image(
+    image_id: int,
+    caption: str = Form(...),
+    seed: int = Form(...),
+    db: Session = Depends(database.get_db),
+    token: str = Depends(auth.oauth2_scheme),
+):
+    try:
+        # Verify token and get current user
+        username = auth.verify_token_string(token)
+        user = auth.get_user_by_username(db, username)
 
+        # Get the image with its associated storyboard
+        db_image = (
+            db.query(models.Image)
+            .join(models.Storyboard)
+            .filter(
+                models.Image.id == image_id,
+                models.Storyboard.owner_id == user.id,
+            )
+            .first()
+        )
+
+        if not db_image:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Image not found or not owned by user",
+            )
+
+        # Update the caption in database first
+        db_image.caption = caption
+        db.commit()
+
+        # Regenerate the image (this will maintain the same filename)
+        generate_single_image(image_id, caption, seed)
+
+        # Update storyboard's updated_at timestamp
+        storyboard = (
+            db.query(models.Storyboard)
+            .filter(models.Storyboard.id == db_image.storyboard_id)
+            .first()
+        )
+        if storyboard:
+            storyboard.updated_at = datetime.now(timezone.utc)
+            db.commit()
+
+        return {"message": "Image regenerated successfully"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error regenerating image: {str(e)}",
+        )
+    
+@app.patch("/images/{image_id}/caption")
+async def update_image_caption(
+    image_id: int,
+    caption: str = Form(...),
+    db: Session = Depends(database.get_db),
+    token: str = Depends(auth.oauth2_scheme),
+):
+    try:
+        # Verify token and get current user
+        username = auth.verify_token_string(token)
+        user = auth.get_user_by_username(db, username)
+
+        # Get the image with its associated storyboard
+        db_image = (
+            db.query(models.Image)
+            .join(models.Storyboard)
+            .filter(
+                models.Image.id == image_id,
+                models.Storyboard.owner_id == user.id,
+            )
+            .first()
+        )
+
+        if not db_image:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Image not found or not owned by user",
+            )
+
+        # Update the caption
+        db_image.caption = caption
+        
+        # Update storyboard's updated_at timestamp
+        storyboard = (
+            db.query(models.Storyboard)
+            .filter(models.Storyboard.id == db_image.storyboard_id)
+            .first()
+        )
+        if storyboard:
+            storyboard.updated_at = datetime.now(timezone.utc)
+        
+        db.commit()
+
+        return {"message": "Caption updated successfully"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating caption: {str(e)}",
+        )
+       
 @app.get("/storyboard/images/{storyboard_id}", response_model=List[ImageOut])
 async def get_storyboard_images(
     storyboard_id: int,

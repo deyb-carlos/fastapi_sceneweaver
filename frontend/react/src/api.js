@@ -13,6 +13,7 @@ API.interceptors.request.use((config) => {
   }
   return config;
 });
+
 const refreshToken = async () => {
   const token = localStorage.getItem("token");
   if (!token) return null;
@@ -40,6 +41,7 @@ const refreshToken = async () => {
     return null;
   }
 };
+
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -62,6 +64,7 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 // Storyboard endpoints
 export const storyboardAPI = {
   create: (name) => API.post('/home', { name }),
@@ -79,14 +82,25 @@ export const authAPI = {
 };
 
 export const imagesAPI = {
- generateImages: (id, formData) => API.post(`/generate-images/${id}`, formData, {
-  headers: {
-    "Content-Type": "multipart/form-data"
+  generateImages: (id, formData) => API.post(`/generate-images/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  }), 
+  regenerateImage: (imageId) => API.post(`/regenerate-image/${imageId}`),
+  getImages: (storyboardId) => API.get(`/storyboard/images/${storyboardId}`),
+  deleteImage: (imageId) => API.delete(`/images/${imageId}`),
+  updateImageCaption: (imageId, caption) => {
+    const formData = new FormData();
+    formData.append('caption', caption);
+    
+    return API.patch(`/images/${imageId}/caption`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
-}), 
-getImages: (storyboardId) => API.get(`/storyboard/images/${storyboardId}`),
-deleteImage: (imageId) => API.delete(`/images/${imageId}`)
-}
+};
 
 export const tokenService = {
   refreshToken,

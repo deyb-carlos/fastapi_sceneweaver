@@ -6,6 +6,7 @@ import models
 from database import SessionLocal
 from text_processor import get_resolved_sentences
 from s3 import upload_image_to_s3
+import random
 
 vae = AutoencoderKL.from_pretrained(
     "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16, use_safetensors=True
@@ -79,4 +80,55 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
         db.rollback()
     finally:
         db.close()
+
+
+def generate_single_image(image_id: int, caption: str, seed: int = None):
+    db = SessionLocal()
+    try:
+        # Get existing image record
+        db_image = db.query(models.Image).filter(models.Image.id == image_id).first()
+
+        seed = seed if seed is not None else random.randint(0, 2**32 - 1)
+        gen = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(seed)
+
+        if not db_image:
+            raise ValueError(f"Image with id {image_id} not found.")
+
+        # Generate image
+        result = pipe(
+            prompt=f"Storyboard sketch of {caption}, black and white, cinematic, high quality",
+            negative_prompt="ugly, deformed, disfigured, poor details, bad anatomy, abstract, bad physics",
+            guidance_scale=8.5,
+            num_inference_steps=30,
+            generator=gen,
+        )
+
+        # Save and upload
+        image = result.images[0]
+        buf = BytesIO()
+        image.save(buf, format="JPEG")
+        buf.seek(0)
+
+        # Use the same file name to overwrite (optional: delete old one if needed)
+        s3_url = upload_image_to_s3(
+            buf.read(),
+            f"image_{image_id}.jpg",
+            folder=f"storyboards/{db_image.storyboard_id}"
+        )
+
+        # Update image record
+        db_image.image_path = s3_url
+        db_image.caption = caption
+        db.commit()
+        db.refresh(db_image)
+
+        return db_image
+
+    except Exception as e:
+        print(f"Error during image regeneration: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 
