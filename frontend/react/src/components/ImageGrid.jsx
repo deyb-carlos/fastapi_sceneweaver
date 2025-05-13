@@ -20,8 +20,8 @@ const ImageGrid = ({
         <button
           onClick={onExpandPanel}
           className={`fixed top-16 mt-5 z-[1001] transition-all duration-300 ${
-            sidebarOpen ? "left-[254px]" : "left-4"
-          } flex items-center justify-center h-10 w-10 bg-white rounded-md shadow-sm border border-gray-200 hover:bg-gray-100`}
+            sidebarOpen ? "left-[270px]" : "left-5"
+          } flex items-center justify-center h-10 w-10 bg-gray rounded-md shadow-sm border border-gray-200 hover:bg-gray-100`}
           title="Expand panel"
         >
           <img

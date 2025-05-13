@@ -113,18 +113,30 @@ const Storyboard = () => {
       setIsGenerating(false);
     }
   };
+const handleRegenerateImage = async (imageId, prompt, seed) => {
+  try {
+    await imagesAPI.regenerateImage(imageId, prompt, seed);
+    // Optionally refresh the image data here if needed
+  } catch (error) {
+    throw error; // This will be caught by the ImageModal's error handling
+  }
+};
 
 const handleUpdateCaption = async (imageId, newCaption) => {
   try {
     // Call your API to update the caption
     await imagesAPI.updateImageCaption(imageId, newCaption);
     
-    // Update local state
-    setStoryboardImages(prevImages => 
-      prevImages.map(img => 
-        img.id === imageId ? { ...img, caption: newCaption } : img
-      )
-    );
+    // Refresh the images data
+    const response = await imagesAPI.getImages(id);
+    if (response.data && Array.isArray(response.data)) {
+      setStoryboardImages(response.data);
+      // Find and set the updated image to keep modal open
+      const updatedImage = response.data.find(img => img.id === imageId);
+      if (updatedImage) {
+        setSelectedImage(updatedImage);
+      }
+    }
     
     return true; // Indicate success
   } catch (error) {
@@ -132,7 +144,6 @@ const handleUpdateCaption = async (imageId, newCaption) => {
     throw new Error(error.response?.data?.detail || "Failed to update caption");
   }
 };
-
   const handleNext = (e) => {
     if (e) e.preventDefault();
     if (currentIndex + 6 < storyboardImages.length) {
@@ -215,6 +226,7 @@ const handleUpdateCaption = async (imageId, newCaption) => {
                 
               }
             }}
+            onRegenerateImage={handleRegenerateImage}
             isDeleting={isDeleting}
             onCaptionUpdate={handleUpdateCaption} 
             isEditingCaption={isEditingCaption}

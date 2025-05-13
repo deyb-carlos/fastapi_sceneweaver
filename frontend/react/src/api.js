@@ -87,7 +87,8 @@ export const imagesAPI = {
       "Content-Type": "multipart/form-data"
     }
   }), 
-  regenerateImage: (imageId) => API.post(`/regenerate-image/${imageId}`),
+
+
   getImages: (storyboardId) => API.get(`/storyboard/images/${storyboardId}`),
   deleteImage: (imageId) => API.delete(`/images/${imageId}`),
   updateImageCaption: (imageId, caption) => {
@@ -99,7 +100,21 @@ export const imagesAPI = {
         'Content-Type': 'multipart/form-data'
       }
     });
+  },
+regenerateImage: (imageId, caption, seed) => {
+  const formData = new FormData();
+  formData.append('caption', caption);
+  // Only append seed if it's not null or undefined
+  if (seed !== null && seed !== undefined) {
+    formData.append('seed', seed.toString());
   }
+  
+  return API.post(`/regenerate-image/${imageId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+}
 };
 
 export const tokenService = {

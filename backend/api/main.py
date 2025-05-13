@@ -76,9 +76,6 @@ async def regenerate_image(
                 detail="Image not found or not owned by user",
             )
 
-        # Update the caption in database first
-        db_image.caption = caption
-        db.commit()
 
         # Regenerate the image (this will maintain the same filename)
         generate_single_image(image_id, caption, seed)
