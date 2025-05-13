@@ -22,7 +22,7 @@ from PIL import Image
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 import random
-from typing import List
+from typing import List, Optional
 import models
 import secrets
 import string
@@ -50,7 +50,7 @@ app.add_middleware(
 async def regenerate_image(
     image_id: int,
     caption: str = Form(...),
-    seed: int = Form(...),
+    seed: Optional[int] = Form(None),
     db: Session = Depends(database.get_db),
     token: str = Depends(auth.oauth2_scheme),
 ):

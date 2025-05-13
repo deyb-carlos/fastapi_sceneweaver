@@ -101,11 +101,12 @@ export const imagesAPI = {
       }
     });
   },
-regenerateImage: (imageId, caption, seed) => {
+regenerateImage: (imageId, caption, seed = null) => {
   const formData = new FormData();
   formData.append('caption', caption);
-  // Only append seed if it's not null or undefined
-  if (seed !== null && seed !== undefined) {
+  
+  // Only append seed if it's not null/undefined and not empty string
+  if (seed !== null && seed !== undefined && seed !== '') {
     formData.append('seed', seed.toString());
   }
   
@@ -115,6 +116,7 @@ regenerateImage: (imageId, caption, seed) => {
     }
   });
 }
+
 };
 
 export const tokenService = {

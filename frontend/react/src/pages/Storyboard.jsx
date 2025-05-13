@@ -33,6 +33,9 @@ const Storyboard = () => {
   const toggleTextArea = () => {
     setIsTextAreaCollapsed(!isTextAreaCollapsed);
   };
+  const sortImagesById = (images) => {
+    return [...images].sort((a, b) => a.id - b.id);
+  };
 
   // Keyboard navigation effect
   useEffect(() => {
@@ -57,7 +60,7 @@ const Storyboard = () => {
       try {
         const response = await imagesAPI.getImages(id);
         if (response.data && Array.isArray(response.data)) {
-          setStoryboardImages(response.data);
+          setStoryboardImages(sortImagesById(response.data));
         } else {
           setError("No images found.");
         }
@@ -81,7 +84,7 @@ const Storyboard = () => {
         if (response.data && Array.isArray(response.data)) {
           if (response.data.length !== imageCountRef.current) {
             imageCountRef.current = response.data.length;
-            setStoryboardImages(response.data);
+            setStoryboardImages(sortImagesById(response.data));
             setIsGenerating(false);
           }
         }
@@ -113,37 +116,54 @@ const Storyboard = () => {
       setIsGenerating(false);
     }
   };
-const handleRegenerateImage = async (imageId, prompt, seed) => {
-  try {
-    await imagesAPI.regenerateImage(imageId, prompt, seed);
-    // Optionally refresh the image data here if needed
-  } catch (error) {
-    throw error; // This will be caught by the ImageModal's error handling
-  }
-};
-
-const handleUpdateCaption = async (imageId, newCaption) => {
-  try {
-    // Call your API to update the caption
-    await imagesAPI.updateImageCaption(imageId, newCaption);
-    
-    // Refresh the images data
-    const response = await imagesAPI.getImages(id);
-    if (response.data && Array.isArray(response.data)) {
-      setStoryboardImages(response.data);
-      // Find and set the updated image to keep modal open
-      const updatedImage = response.data.find(img => img.id === imageId);
-      if (updatedImage) {
-        setSelectedImage(updatedImage);
+  const handleRegenerateImage = async (imageId, caption, seed) => {
+    try {
+      await imagesAPI.regenerateImage(imageId, caption, seed);
+      // Refresh the images after regeneration
+      const response = await imagesAPI.getImages(id);
+      if (response.data) {
+        setStoryboardImages(sortImagesById(response.data));
+        // Keep the same image selected if it still exists
+        const regeneratedImage = response.data.find(
+          (img) => img.id === imageId
+        );
+        if (regeneratedImage) {
+          setSelectedImage(regeneratedImage);
+        }
       }
+      return true;
+    } catch (error) {
+      console.error("Error regenerating image:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to regenerate image"
+      );
     }
-    
-    return true; // Indicate success
-  } catch (error) {
-    console.error("Error updating caption:", error);
-    throw new Error(error.response?.data?.detail || "Failed to update caption");
-  }
-};
+  };
+
+  const handleUpdateCaption = async (imageId, newCaption) => {
+    try {
+      // Call your API to update the caption
+      await imagesAPI.updateImageCaption(imageId, newCaption);
+
+      // Refresh the images data
+      const response = await imagesAPI.getImages(id);
+      if (response.data && Array.isArray(response.data)) {
+        setStoryboardImages(sortImagesById(response.data));
+        // Find and set the updated image to keep modal open
+        const updatedImage = response.data.find((img) => img.id === imageId);
+        if (updatedImage) {
+          setSelectedImage(updatedImage);
+        }
+      }
+
+      return true; // Indicate success
+    } catch (error) {
+      console.error("Error updating caption:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to update caption"
+      );
+    }
+  };
   const handleNext = (e) => {
     if (e) e.preventDefault();
     if (currentIndex + 6 < storyboardImages.length) {
@@ -212,23 +232,22 @@ const handleUpdateCaption = async (imageId, newCaption) => {
               try {
                 setIsDeleting(true);
                 await imagesAPI.deleteImage(selectedImage.id);
-                
+
                 setStoryboardImages((prev) =>
                   prev.filter((img) => img.id !== selectedImage.id)
                 );
-             
+
                 setSelectedImage(null);
               } catch (error) {
                 console.error("Error deleting image:", error);
                 alert("Failed to delete image");
               } finally {
                 setIsDeleting(false);
-                
               }
             }}
             onRegenerateImage={handleRegenerateImage}
             isDeleting={isDeleting}
-            onCaptionUpdate={handleUpdateCaption} 
+            onCaptionUpdate={handleUpdateCaption}
             isEditingCaption={isEditingCaption}
             captionEditText={captionEditText}
             onCaptionEditChange={setCaptionEditText}
@@ -239,12 +258,15 @@ const handleUpdateCaption = async (imageId, newCaption) => {
                   captionEditText
                 );
                 setStoryboardImages((prev) =>
-                  prev.map((img) =>
-                    img.id === selectedImage.id
-                      ? { ...img, caption: captionEditText }
-                      : img
+                  sortImagesById(
+                    prev.map((img) =>
+                      img.id === selectedImage.id
+                        ? { ...img, caption: captionEditText }
+                        : img
+                    )
                   )
                 );
+
                 setIsEditingCaption(false);
               } catch (error) {
                 console.error("Error updating caption:", error);

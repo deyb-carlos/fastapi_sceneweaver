@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const ImageModal = ({
-  image,
+  image: initialImage,
   onClose,
   onDelete,
   isDeleting,
@@ -9,46 +9,65 @@ const ImageModal = ({
   onRegenerateImage,
 }) => {
   const [isEditingCaption, setIsEditingCaption] = useState(false);
-  const [captionEditText, setCaptionEditText] = useState(image.caption);
+  const [captionEditText, setCaptionEditText] = useState(initialImage.caption);
   const [isSaving, setIsSaving] = useState(false);
   const [seed, setSeed] = useState("");
-  const [regenerationPrompt, setRegenerationPrompt] = useState(image.caption);
+  const [regenerationPrompt, setRegenerationPrompt] = useState(
+    initialImage.caption
+  );
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerationError, setRegenerationError] = useState(null);
+  const [currentImage, setCurrentImage] = useState(initialImage);
 
-const handleRegenerate = async () => {
-  try {
-    setIsRegenerating(true);
-    setRegenerationError(null);
-    
-    const seedValue = seed.trim() ? parseInt(seed) : null;
-    
-    if (!regenerationPrompt.trim()) {
-      throw new Error("Prompt cannot be empty");
-    }
+  // Update local state when the initialImage prop changes
+  useEffect(() => {
+    setCurrentImage(initialImage);
+    setCaptionEditText(initialImage.caption);
+    setRegenerationPrompt(initialImage.caption);
+  }, [initialImage]);
 
-    await onRegenerateImage(image.id, regenerationPrompt.trim(), seedValue);
-  } catch (error) {
-    // Handle FastAPI validation errors
-    if (error.response?.data?.detail) {
-      if (Array.isArray(error.response.data.detail)) {
-        // Handle multiple validation errors
-        setRegenerationError(error.response.data.detail.map(d => d.msg).join(', '));
-      } else {
-        // Handle single error message
-        setRegenerationError(error.response.data.detail);
+  const handleRegenerate = async () => {
+    try {
+      setIsRegenerating(true);
+      setRegenerationError(null);
+
+  
+      const seedValue = seed.trim() === '' ? null : seed;
+
+      if (!regenerationPrompt.trim()) {
+        throw new Error("Prompt cannot be empty");
       }
-    } else {
-      setRegenerationError(error.message || "Failed to regenerate image");
-    }
-  } finally {
-    setIsRegenerating(false);
-  }
-};
 
+      const regeneratedImage = await onRegenerateImage(
+        currentImage.id,
+        regenerationPrompt.trim(),
+        seedValue
+      );
+
+      // Update the current image with the regenerated one
+      setCurrentImage(regeneratedImage);
+    } catch (error) {
+      // Handle FastAPI validation errors
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          // Handle multiple validation errors
+          setRegenerationError(
+            error.response.data.detail.map((d) => d.msg).join(", ")
+          );
+        } else {
+          // Handle single error message
+          setRegenerationError(error.response.data.detail);
+        }
+      } else {
+        setRegenerationError(error.message || "Failed to regenerate image");
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
   const handleSeedChange = (e) => {
     const value = e.target.value;
-    if (value === '' || /^\d+$/.test(value)) {
+    if (value === "" || /^\d+$/.test(value)) {
       setSeed(value);
     }
   };
@@ -63,7 +82,7 @@ const handleRegenerate = async () => {
           {/* Image Container */}
           <div className="relative bg-white rounded-lg overflow-hidden shadow-xl">
             <button
-              className="absolute top-2 right-2 text-white hover:text-gray-300 z-10"
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 z-10"
               onClick={onClose}
             >
               <svg
@@ -82,7 +101,7 @@ const handleRegenerate = async () => {
               </svg>
             </button>
             <button
-              className="absolute top-2 right-12 text-white hover:text-red-400 z-10"
+              className="absolute top-2 right-12 text-gray-500 hover:text-red-400 z-10"
               onClick={onDelete}
               disabled={isDeleting}
             >
@@ -126,7 +145,7 @@ const handleRegenerate = async () => {
             </button>
 
             <img
-              src={image.image_path}
+              src={currentImage.image_path}
               alt="Enlarged storyboard image"
               className="w-full h-auto max-h-[70vh] object-contain"
             />
@@ -155,7 +174,14 @@ const handleRegenerate = async () => {
                       onClick={async () => {
                         try {
                           setIsSaving(true);
-                          await onCaptionUpdate(image.id, captionEditText);
+                          await onCaptionUpdate(
+                            currentImage.id,
+                            captionEditText
+                          );
+                          setCurrentImage((prev) => ({
+                            ...prev,
+                            caption: captionEditText,
+                          }));
                           setIsEditingCaption(false);
                         } catch (error) {
                           console.error("Failed to update caption:", error);
@@ -193,7 +219,7 @@ const handleRegenerate = async () => {
               ) : (
                 <>
                   <p className="text-gray-700 break-words whitespace-normal pr-10">
-                    {image.caption}
+                    {currentImage.caption}
                   </p>
                   <button
                     className="absolute right-4 bottom-4 text-gray-500 hover:text-black"
@@ -234,9 +260,7 @@ const handleRegenerate = async () => {
                 rows={3}
                 style={{ height: "80px" }}
               />
-              <span className="mt-0 text-xs text-gray-500">
-                Note: The prompt will not replace the caption when regenerating
-              </span>
+     
             </div>
 
             <div className="mb-4 flex flex-col">
@@ -250,7 +274,7 @@ const handleRegenerate = async () => {
                 className="w-20 p-2 border rounded text-sm"
               />
               <span className="mt-1 text-xs text-gray-500">
-                Note: The prompt will not replace the caption when regenerating
+                Note: Leave blank for random seed
               </span>
             </div>
 
