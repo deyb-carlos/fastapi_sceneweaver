@@ -46,6 +46,7 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
     try:
         prompts = get_resolved_sentences(story)
         width, height = get_dimensions(resolution)
+
         for num, prompt in enumerate(prompts):
             result = pipe(
                 prompt=f"Storyboard sketch of {prompt}, black and white, cinematic, high quality",
@@ -56,23 +57,26 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
                 num_inference_steps=30,
                 generator=generator,
             )
+
             image = result.images[0]
             buf = BytesIO()
             image.save(buf, format="JPEG")
             buf.seek(0)
 
             s3_url = upload_image_to_s3(
-                buf.read(), f"image_{num+1}.jpg", folder=f"storyboards/{storyboard_id}"
+                buf.read(), f"image_{num + 1}.jpg", folder=f"storyboards/{storyboard_id}"
             )
 
             db_image = models.Image(
                 storyboard_id=storyboard_id, image_path=s3_url, caption=prompt
             )
             db.add(db_image)
+            db.commit()  # Commit after each image
+            db.refresh(db_image)  # Optional, in case you want to return/use it immediately
 
-        db.commit()
     except Exception as e:
         print(f"Error during image generation: {e}")
         db.rollback()
     finally:
         db.close()
+

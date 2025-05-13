@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { imagesAPI } from "../api"; // Adjust the path if necessary
 
 const Storyboard = () => {
   const navigate = useNavigate();
-  const { id, name } = useParams(); // Use params directly
+  const { id, name } = useParams();
   const [userInput, setUserInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -14,7 +14,34 @@ const Storyboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isGeneratingLong, setIsGeneratingLong] = useState(false);
+  const [isTextAreaCollapsed, setIsTextAreaCollapsed] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [prevTextAreaState, setPrevTextAreaState] =
+    useState(isTextAreaCollapsed);
+  const toggleTextArea = () => {
+    setIsTextAreaCollapsed(!isTextAreaCollapsed);
+  };
 
+  const imageCountRef = useRef(0);
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowRight") {
+        handleNext();
+      } else if (e.key === "ArrowLeft") {
+        handlePrev();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [currentIndex, storyboardImages.length]);
+  useEffect(() => {
+    setPrevTextAreaState(isTextAreaCollapsed);
+  }, [isTextAreaCollapsed]);
   useEffect(() => {
     const fetchImages = async () => {
       setLoading(true);
@@ -59,6 +86,31 @@ const Storyboard = () => {
       document.body.classList.remove("modal-open");
     };
   }, [selectedImage]);
+
+  useEffect(() => {
+    const pollInterval = 3000;
+
+    const pollForImages = async () => {
+      try {
+        const response = await imagesAPI.getImages(id);
+        if (response.data && Array.isArray(response.data)) {
+          if (response.data.length !== imageCountRef.current) {
+            imageCountRef.current = response.data.length;
+            setStoryboardImages(response.data);
+            setIsGenerating(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error polling for images:", err);
+      }
+    };
+
+    const intervalId = setInterval(pollForImages, pollInterval);
+    pollForImages(); // Run once immediately on mount
+
+    return () => clearInterval(intervalId);
+  }, [id]);
+
   const handleGenerateImages = async (e) => {
     e.preventDefault();
 
@@ -66,42 +118,13 @@ const Storyboard = () => {
 
     try {
       setIsGenerating(true);
-
+      setIsGeneratingLong(true);
       const formData = new FormData();
       formData.append("story", userInput);
       formData.append("resolution", resolution);
 
       await imagesAPI.generateImages(id, formData);
       alert("Image generation started!");
-
-      // Start polling for new images
-      const previousImageCount = storyboardImages.length;
-      const pollInterval = 3000; // 3 seconds
-      const maxAttempts = 20; // stop after ~1 minute
-      let attempts = 0;
-
-      const pollForNewImages = async () => {
-        try {
-          const response = await imagesAPI.getImages(id);
-          if (response.data && Array.isArray(response.data)) {
-            if (response.data.length > previousImageCount) {
-              setStoryboardImages(response.data);
-              console.log("New image(s) detected. Polling stopped.");
-              return;
-            }
-          }
-        } catch (err) {
-          console.error("Error polling for new images:", err);
-        }
-
-        if (++attempts < maxAttempts) {
-          setTimeout(pollForNewImages, pollInterval);
-        } else {
-          console.warn("Polling timed out.");
-        }
-      };
-
-      pollForNewImages(); // Start polling
     } catch (error) {
       console.error("Error generating images:", error);
       alert("Failed to start image generation. Please try again.");
@@ -110,7 +133,9 @@ const Storyboard = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = (e) => {
+    if (e) e.preventDefault();
+ 
     if (currentIndex + 6 < storyboardImages.length) {
       setCurrentIndex(currentIndex + 6);
     } else {
@@ -118,7 +143,9 @@ const Storyboard = () => {
     }
   };
 
-  const handlePrev = () => {
+  const handlePrev = (e) => {
+    if (e) e.preventDefault();
+  
     if (currentIndex === 0) {
       setCurrentIndex(
         storyboardImages.length - (storyboardImages.length % 6 || 6)
@@ -179,7 +206,7 @@ const Storyboard = () => {
         onClick={toggleSidebar}
       >
         <img
-          src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/menu.png"
+          src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/burger-menu-left-svgrepo-com.svg"
           alt="Menu"
           className="w-8 h-8"
         />
@@ -227,10 +254,33 @@ const Storyboard = () => {
       >
         {/* Left Side - Text Area (30%) */}
         <div
-          className={`w-[30%] border-r border-gray-200 p-4 flex flex-col transition-all duration-300 ${
+          className={`${
+            isTextAreaCollapsed ? "hidden" : "w-[30%]"
+          } border-r border-gray-200 p-4 flex flex-col transition-all duration-300 ${
             sidebarOpen ? "ml-0" : "ml-0"
           }`}
         >
+          {/* Add collapse button at the top */}
+          <button
+            onClick={toggleTextArea}
+            className="self-end mb-2 p-1 text-gray-500 hover:text-gray-700"
+            title="Collapse panel"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
           <form
             onSubmit={handleGenerateImages}
             className="flex flex-col h-full"
@@ -392,6 +442,69 @@ const Storyboard = () => {
                   />
                 </svg>
               </button>
+
+              {/* Delete Button */}
+              <button
+                className="absolute -top-10 right-12 text-white hover:text-red-400"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    setIsDeleting(true);
+                    await imagesAPI.deleteImage(selectedImage.id);
+                    setStoryboardImages((prev) =>
+                      prev.filter((img) => img.id !== selectedImage.id)
+                    );
+                    setSelectedImage(null);
+                  } catch (error) {
+                    console.error("Error deleting image:", error);
+                    alert("Failed to delete image");
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  // Simple loading circle
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                ) : (
+                  // Normal delete icon
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                )}
+              </button>
+
               <div className="bg-white rounded-lg overflow-hidden shadow-xl">
                 <img
                   src={selectedImage.image_path}
@@ -399,20 +512,42 @@ const Storyboard = () => {
                   className="w-full h-auto max-h-[70vh] object-contain"
                 />
                 <div className="p-4 bg-white">
-                  <p className="font-semibold">Caption:</p>
-                  <p className="text-gray-700">{selectedImage.caption}</p>
+                  <p className="font-semibold text-gray-500">Caption:</p>
+                  <p className="text-gray-700 break-words whitespace-normal">
+                    {selectedImage.caption}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         )}
+
         {/* Right Side - Output Grid (70%) */}
-        <div className="w-[70%] overflow-y-auto p-8 relative bg-[radial-gradient(circle_at_center,#e5e7eb_1px,transparent_1px)] bg-[length:20px_20px]">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,#e5e7eb_1px,transparent_1px)] bg-[length:20px_20px]"></div>
+        <div
+          className={`overflow-y-auto p-8 relative bg-[radial-gradient(circle_at_center,#e5e7eb_1px,transparent_1px)] bg-[length:20px_20px] ${
+            isTextAreaCollapsed ? "w-[90%] mx-auto" : "w-[70%]"
+          } scrollbar-hide`}
+        >
+          {/* Add expand button when text area is collapsed */}
+          {isTextAreaCollapsed && (
+            <button
+              onClick={() => setIsTextAreaCollapsed(false)}
+              className={`fixed top-16 mt-5 z-[1001] transition-all duration-300 ${
+                sidebarOpen ? "left-[254px]" : "left-4"
+              } flex items-center justify-center h-10 w-10 bg-white rounded-md shadow-sm border border-gray-200 hover:bg-gray-100`}
+              title="Expand panel"
+            >
+              <img
+                src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/comment.png"
+                alt="Expand panel"
+                className="h-6 w-6 object-contain"
+              />
+            </button>
+          )}
 
           {loading ? (
             <div className="text-center">Loading images...</div>
-          ) : storyboardImages.length === 0 ? (
+          ) : storyboardImages.length === 0 && !isGeneratingLong ? (
             <div className="flex flex-col items-center justify-center h-full">
               <div className="text-center max-w-md">
                 <h2 className="text-2xl font-bold text-gray-700 mb-4">
@@ -426,6 +561,41 @@ const Storyboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-0">
+              {/* Loading indicator card - placed first in the grid */}
+              {isGeneratingLong && (
+                <div className="flex flex-col">
+                  <div className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 animate-pulse">
+                    <div className="flex flex-col items-center">
+                      <svg
+                        className="animate-spin h-8 w-8 text-gray-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span className="mt-2 text-gray-500">
+                        Generating images...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing images */}
+
               {storyboardImages
                 .slice(currentIndex, currentIndex + 6)
                 .map((image, i) => (
@@ -447,7 +617,7 @@ const Storyboard = () => {
                       <p className="text-xs mb-1">
                         Caption {currentIndex + i + 1}:
                       </p>
-                      <p className="font-normal text-sm break-words whitespace-normal">
+                      <p className="font-normal text-sm break-words whitespace-normal overflow-hidden">
                         {image.caption}
                       </p>
                     </div>
@@ -461,12 +631,15 @@ const Storyboard = () => {
       {/* Carousel Buttons */}
       {storyboardImages.length > 6 && (
         <>
+          {/* Previous Button with fade animation */}
           <button
             onClick={handlePrev}
-            className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500  text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
-              sidebarOpen
-                ? "left-[calc(30%+180px+20px)]"
-                : "left-[calc(30%+20px)]"
+            className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
+              isTextAreaCollapsed
+                ? "left-4 opacity-100" // Visible at left edge when text area closed
+                : sidebarOpen
+                ? "left-[calc(30%+250px+20px)] opacity-100"
+                : "left-[calc(30%+20px)] opacity-100"
             }`}
           >
             <svg
@@ -484,11 +657,21 @@ const Storyboard = () => {
               />
             </svg>
           </button>
+
+          {/* Next Button with fade animation */}
           <button
             onClick={handleNext}
-            className={`fixed right-4 top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
+            className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
               sidebarOpen ? "right-4" : "right-4"
             }`}
+            style={{
+              transition: "opacity 300ms ease",
+              animation: `${
+                isTextAreaCollapsed !== prevTextAreaState
+                  ? "fadeIn 300ms ease forwards"
+                  : ""
+              }`,
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

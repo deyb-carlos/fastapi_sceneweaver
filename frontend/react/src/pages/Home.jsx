@@ -16,6 +16,7 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [username, setUsername] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
+    
     show: false,
     storyboardId: null,
     storyboardName: "",
@@ -23,7 +24,7 @@ const Home = () => {
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
-
+const sortedStoryboards = sortStoryboards(storyboards, sortMode);
   function sortStoryboards(list, mode) {
     if (mode === "az") {
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
@@ -41,26 +42,23 @@ const Home = () => {
     }
   }, [sortMode]);
 
-  useEffect(() => {
-    const fetchStoryboards = async () => {
-      try {
-        setIsLoading(true);
-        const response = await storyboardAPI.getAll();
-        const sortedStoryboards = sortStoryboards(
-          response.data || [],
-          sortMode
-        );
-        setStoryboards(sortedStoryboards);
-      } catch (error) {
-        console.error("Failed to fetch storyboards:", error);
-        setStoryboards([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchStoryboards = async () => {
+    try {
+      setIsLoading(true);
+      const response = await storyboardAPI.getAll();
+      setStoryboards(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch storyboards:", error);
+      setStoryboards([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchStoryboards();
-  }, []);
+  fetchStoryboards();
+}, []);
+
 
   useEffect(() => {
     const refreshInterval = 24 * 60 * 60 * 1000;
@@ -339,7 +337,7 @@ const Home = () => {
           </div>
 
           {/* Storyboard Thumbnails */}
-          {storyboards.map((storyboard) => (
+          {sortedStoryboards.map((storyboard) => (
             <div
               id={`storyboard-${storyboard.id}`}
               key={storyboard.id}

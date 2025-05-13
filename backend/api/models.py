@@ -4,7 +4,6 @@ from database import engine, Base
 from datetime import datetime, timezone
 
 
-
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -25,8 +24,10 @@ class Storyboard(Base):
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
-    owner = relationship("User", back_populates="storyboards") 
-    images = relationship("Image", back_populates="storyboard")
+    owner = relationship("User", back_populates="storyboards")
+    images = relationship(
+        "Image", back_populates="storyboard", cascade="all, delete-orphan"
+    )
 
 
 class Image(Base):
@@ -47,7 +48,6 @@ class PasswordResetToken(Base):
     token = Column(String, unique=True, index=True)
     expires_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-
 
 
 Base.metadata.create_all(bind=engine)

@@ -85,7 +85,7 @@ export const imagesAPI = {
   }
 }), 
 getImages: (storyboardId) => API.get(`/storyboard/images/${storyboardId}`),
-
+deleteImage: (imageId) => API.delete(`/images/${imageId}`)
 }
 
 export const tokenService = {

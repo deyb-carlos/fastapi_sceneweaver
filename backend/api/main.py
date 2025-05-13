@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from database import SessionLocal, engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from schemas import (
     UserCreate,
@@ -29,6 +29,7 @@ import string
 from reset_password import send_reset_email
 from fastapi import BackgroundTasks
 from batch_generator import generate_batch_images
+from s3 import delete_image_from_s3
 
 app = FastAPI()
 
@@ -44,6 +45,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/storyboard/images/{storyboard_id}", response_model=List[ImageOut])
 async def get_storyboard_images(
@@ -92,6 +94,7 @@ async def get_storyboard_images(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching images: {str(e)}",
         )
+
 
 @app.post("/register")
 def register(user: UserCreate, db: Session = Depends(database.get_db)):
@@ -227,7 +230,7 @@ def create_storyboard(
         db_storyboard = models.Storyboard(
             name=storyboard.name,
             owner_id=user.id,
-            thumbnail="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/tumblr_f62bc01ba9fb6acf8b5d438d6d2ae71a_c5a496d1_1280.jpg",
+            thumbnail="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/thumbnail.png",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -235,6 +238,11 @@ def create_storyboard(
         db.add(db_storyboard)
         db.commit()
         db.refresh(db_storyboard)
+
+        if db_storyboard.images:
+            db_storyboard.thumbnail = db_storyboard.images[0].image_path
+            db.commit()
+
         return db_storyboard
 
     except Exception as e:
@@ -316,6 +324,9 @@ def delete_storyboard(
                 detail="Storyboard not found or not owned by user",
             )
 
+        for image in db_storyboard.images:
+            delete_image_from_s3(image.image_path)
+
         db.delete(db_storyboard)
         db.commit()
         return {"message": "Storyboard deleted successfully"}
@@ -342,18 +353,29 @@ def get_user_storyboards(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
-        # Get all storyboards for the user
+        # Fetch storyboards with images eager-loaded
         storyboards = (
             db.query(models.Storyboard)
+            .options(joinedload(models.Storyboard.images))
             .filter(models.Storyboard.owner_id == user.id)
             .all()
         )
 
-        # Return empty array if no storyboards exist
+        # Set thumbnail to newest image (highest id)
+        for storyboard in storyboards:
+            if storyboard.images:
+                newest_image = max(storyboard.images, key=lambda img: img.id)
+                if storyboard.thumbnail != newest_image.image_path:
+                    storyboard.thumbnail = newest_image.image_path
+                    storyboard.updated_at = datetime.now(timezone.utc)
+
+        db.commit()
+
         return storyboards or []
 
     except Exception as e:
         print(f"Unexpected error: {e}")
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching storyboards: {str(e)}",
@@ -397,6 +419,72 @@ def get_storyboard(
             detail=f"Error fetching storyboard: {str(e)}",
         )
 
+
+
+
+@app.delete("/images/{image_id}")
+def delete_image(
+    image_id: int,
+    db: Session = Depends(database.get_db),
+    token: str = Depends(auth.oauth2_scheme),
+):
+    try:
+        # Verify token and get current user
+        username = auth.verify_token_string(token)
+        user = auth.get_user_by_username(db, username)
+
+        # Get the image with its associated storyboard
+        db_image = (
+            db.query(models.Image)
+            .join(models.Storyboard)
+            .filter(
+                models.Image.id == image_id,
+                models.Storyboard.owner_id == user.id,
+            )
+            .first()
+        )
+
+        if not db_image:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Image not found or not owned by user",
+            )
+
+        # Delete the image from S3
+        delete_image_from_s3(db_image.image_path)
+
+        # Delete the image from database
+        db.delete(db_image)
+        db.commit()
+
+        # Update storyboard thumbnail if needed
+        storyboard = (
+            db.query(models.Storyboard)
+            .filter(models.Storyboard.id == db_image.storyboard_id)
+            .first()
+        )
+        
+        if storyboard:
+            # If the deleted image was the thumbnail, update it to the newest remaining image
+            if storyboard.thumbnail == db_image.image_path:
+                remaining_images = storyboard.images
+                if remaining_images:
+                    newest_image = max(remaining_images, key=lambda img: img.id)
+                    storyboard.thumbnail = newest_image.image_path
+                else:
+                    storyboard.thumbnail = "https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/thumbnail.png"
+                
+                storyboard.updated_at = datetime.now(timezone.utc)
+                db.commit()
+
+        return {"message": "Image deleted successfully"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting image: {str(e)}",
+        )
 
 @app.post("/forgot-password")
 async def forgot_password(
@@ -485,7 +573,16 @@ async def generate_images(
     if not storyboard:
         raise HTTPException(status_code=404, detail="Storyboard not found")
 
+    storyboard.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
     background_tasks.add_task(generate_batch_images, story, storyboard.id, resolution)
+
+    if storyboard.images:
+        # Sort images by id in descending order (newest first)
+        sorted_images = sorted(storyboard.images, key=lambda img: img.id, reverse=True)
+        newest_image = sorted_images[0]
+        storyboard.thumbnail = newest_image.image_path
+        db.commit()
+
     return {"message": "Image generation started"}
-
-
