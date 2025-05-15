@@ -86,12 +86,15 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
         db.close()
 
 
-def generate_single_image(image_id: int, caption: str, seed: int = None):
+def generate_single_image(
+    image_id: int, caption: str, seed: int = None, resolution: str = "1:1"
+):
     db = SessionLocal()
     try:
         # Get existing image record
         db_image = db.query(models.Image).filter(models.Image.id == image_id).first()
         processed_caption = detect_and_translate_to_english(caption)
+        width, height = get_dimensions(resolution)
         seed = seed if seed is not None else random.randint(0, 2**32 - 1)
         gen = torch.Generator(
             device="cuda" if torch.cuda.is_available() else "cpu"
@@ -106,8 +109,11 @@ def generate_single_image(image_id: int, caption: str, seed: int = None):
             negative_prompt="ugly, deformed, disfigured, poor details, bad anatomy, abstract, bad physics",
             guidance_scale=8.5,
             num_inference_steps=30,
+            width=width,
+            height=height,
             generator=gen,
         )
+      
 
         # Save and upload
         image = result.images[0]

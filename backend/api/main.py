@@ -48,9 +48,11 @@ app.add_middleware(
 
 @app.post("/regenerate-image/{image_id}")
 async def regenerate_image(
+    background_tasks: BackgroundTasks,
     image_id: int,
     caption: str = Form(...),
     seed: Optional[int] = Form(None),
+    resolution: str = Form(...),
     db: Session = Depends(database.get_db),
     token: str = Depends(auth.oauth2_scheme),
 ):
@@ -75,10 +77,9 @@ async def regenerate_image(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Image not found or not owned by user",
             )
-
-
+        
         # Regenerate the image (this will maintain the same filename)
-        generate_single_image(image_id, caption, seed)
+        generate_single_image(image_id, caption, seed, resolution)
 
         # Update storyboard's updated_at timestamp
         storyboard = (

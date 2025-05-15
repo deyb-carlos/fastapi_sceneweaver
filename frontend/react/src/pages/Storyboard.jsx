@@ -116,9 +116,9 @@ const Storyboard = () => {
       setIsGenerating(false);
     }
   };
-  const handleRegenerateImage = async (imageId, caption, seed) => {
+  const handleRegenerateImage = async (imageId, caption, seed, resolution) => {
     try {
-      await imagesAPI.regenerateImage(imageId, caption, seed);
+      await imagesAPI.regenerateImage(imageId, caption, seed, resolution);
       // Refresh the images after regeneration
       const response = await imagesAPI.getImages(id);
       if (response.data) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 const ImageModal = ({
   image: initialImage,
@@ -16,21 +16,26 @@ const ImageModal = ({
     initialImage.caption
   );
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [useOpenPose, setUseOpenPose] = useState(false);
+  const [openPoseImage, setOpenPoseImage] = useState(null);
   const [regenerationError, setRegenerationError] = useState(null);
   const [currentImage, setCurrentImage] = useState(initialImage);
-  const [imageWidth, setImageWidth] = useState(0);
-
-  // Update local state when the initialImage prop changes
+  const [feedbackSelection, setFeedbackSelection] = useState(null);
+  const [aspectRatio, setAspectRatio] = useState("1:1"); // Default to 1:1
+  const [resolution, setResolution] = useState("1:1");
+  const [openPoseFile, setOpenPoseFile] = useState(null);
   useEffect(() => {
     setCurrentImage(initialImage);
     setCaptionEditText(initialImage.caption);
     setRegenerationPrompt(initialImage.caption);
   }, [initialImage]);
-
-  const handleImageLoad = (e) => {
-    setImageWidth(e.target.clientWidth);
+  const handleOpenPoseUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setOpenPoseImage(file);
+      // You might want to preview the image or process it here
+    }
   };
-
   const handleRegenerate = async () => {
     try {
       setIsRegenerating(true);
@@ -42,24 +47,23 @@ const ImageModal = ({
         throw new Error("Prompt cannot be empty");
       }
 
+      console.log("Regenerating image with resolution:", resolution);
+
       const regeneratedImage = await onRegenerateImage(
         currentImage.id,
         regenerationPrompt.trim(),
-        seedValue
+        seedValue,
+        resolution
       );
 
-      // Update the current image with the regenerated one
       setCurrentImage(regeneratedImage);
     } catch (error) {
-      // Handle FastAPI validation errors
       if (error.response?.data?.detail) {
         if (Array.isArray(error.response.data.detail)) {
-          // Handle multiple validation errors
           setRegenerationError(
             error.response.data.detail.map((d) => d.msg).join(", ")
           );
         } else {
-          // Handle single error message
           setRegenerationError(error.response.data.detail);
         }
       } else {
@@ -69,13 +73,60 @@ const ImageModal = ({
       setIsRegenerating(false);
     }
   };
-
   const handleSeedChange = (e) => {
     const value = e.target.value;
     if (value === "" || /^\d+$/.test(value)) {
       setSeed(value);
     }
   };
+  const ResolutionOption = ({ value, currentValue, onChange, icon }) => {
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(value)}
+        className={`p-2 border rounded relative group ${
+          currentValue === value
+            ? "bg-gray-700 border-white"
+            : "border-gray-500"
+        }`}
+        aria-label={value}
+      >
+        {icon}
+        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          {value}
+        </span>
+      </button>
+    );
+  };
+  const handleFeedbackSelection = (selection) => {
+    // Toggle selection if clicking the same button again
+    if (feedbackSelection === selection) {
+      setFeedbackSelection(null);
+    } else {
+      setFeedbackSelection(selection);
+    }
+  };
+
+  // Determine container positions based on feedback selection
+  const showRegenerationPanel = feedbackSelection === "thumbsDown";
+
+  const determineAspectRatio = (width, height) => {
+    if (width === height) return "1:1";
+    if (width > height && width / height === 16 / 9) return "16:9";
+    if (width < height && height / width === 16 / 9) return "9:16";
+    return "1:1"; // Default fallback
+  };
+
+  useEffect(() => {
+    if (currentImage?.image_path) {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = determineAspectRatio(img.width, img.height);
+        setAspectRatio(ratio);
+      };
+      img.src = currentImage.image_path;
+    }
+  }, [currentImage]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-[2000] flex items-center justify-center p-4">
@@ -85,7 +136,19 @@ const ImageModal = ({
       >
         <div className="flex justify-center items-center gap-6">
           {/* Image Container */}
-          <div className="relative bg-white rounded-lg overflow-hidden shadow-xl max-w-full flex flex-col">
+          <div
+            className={`relative bg-white rounded-lg overflow-hidden shadow-xl transition-all duration-500 ease-in-out ${
+              showRegenerationPanel
+                ? `transform ${
+                    aspectRatio === "16:9"
+                      ? "-translate-x-96"
+                      : aspectRatio === "9:16"
+                      ? "-translate-x-68"
+                      : "-translate-x-85"
+                  }`
+                : "transform translate-x-0"
+            }`}
+          >
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 z-10"
               onClick={onClose}
@@ -150,17 +213,13 @@ const ImageModal = ({
             </button>
 
             <img
-              src={currentImage.image_path}
+              src={currentImage.image_path || "/placeholder.svg"}
               alt="Enlarged storyboard image"
               className="w-full h-auto max-h-[70vh] object-contain"
-              onLoad={handleImageLoad}
             />
 
             {/* Caption Section */}
-            <div 
-              className="p-4 bg-white w-full box-border relative"
-              style={{ maxWidth: `${imageWidth}px` }}
-            >
+            <div className="p-4 bg-white relative">
               <p className="font-semibold text-gray-500 mb-2">Caption:</p>
               {isEditingCaption ? (
                 <>
@@ -227,9 +286,9 @@ const ImageModal = ({
                 </>
               ) : (
                 <>
-                  <div className="text-gray-700 break-words whitespace-normal pr-10 overflow-hidden">
+                  <p className="text-gray-700 break-words whitespace-normal pr-10">
                     {currentImage.caption}
-                  </div>
+                  </p>
                   <button
                     className="absolute right-4 bottom-4 text-gray-500 hover:text-black"
                     onClick={() => setIsEditingCaption(true)}
@@ -252,38 +311,236 @@ const ImageModal = ({
                 </>
               )}
             </div>
+            <div className="mt-4 pt-3 border-t border-gray-200 bg-black">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-white p-1.5">
+                  Are you satisfied with this output?
+                </p>
+                <div className="flex gap-3 p-1.5">
+                  <button
+                    className={`p-2 rounded-full transition-colors ${
+                      feedbackSelection === "thumbsUp"
+                        ? "bg-green-100"
+                        : "hover:bg-gray-100"
+                    }`}
+                    aria-label="Thumbs up"
+                    onClick={() => handleFeedbackSelection("thumbsUp")}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill={
+                        feedbackSelection === "thumbsUp"
+                          ? "currentColor"
+                          : "none"
+                      }
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-green-600"
+                    >
+                      <path d="M7 10v12"></path>
+                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    className={`p-2 rounded-full transition-colors ${
+                      feedbackSelection === "thumbsDown"
+                        ? "bg-red-100"
+                        : "hover:bg-gray-100"
+                    }`}
+                    aria-label="Thumbs down"
+                    onClick={() => handleFeedbackSelection("thumbsDown")}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill={
+                        feedbackSelection === "thumbsDown"
+                          ? "currentColor"
+                          : "none"
+                      }
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-red-600"
+                    >
+                      <path d="M17 14V2"></path>
+                      <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Regeneration Panel */}
-          <div className="w-150 bg-black border border-gray-500 rounded-lg shadow-xl p-4 h-fit flex flex-col justify-center">
+          {/* Regeneration Panel */}
+          <div
+            className={`w-150 bg-black border border-gray-500 rounded-lg shadow-xl p-4 h-fit flex flex-col justify-center absolute transition-all duration-500 ease-in-out ${
+              showRegenerationPanel
+                ? `opacity-100 transform ${
+                    aspectRatio === "16:9"
+                      ? "translate-x-120"
+                      : aspectRatio === "9:16"
+                      ? "translate-x-68"
+                      : "translate-x-85"
+                  } z-10`
+                : "opacity-0 transform translate-x-0 -z-10"
+            }`}
+          >
             <h3 className="font-semibold text-white mb-3">Regenerate Image</h3>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-500">
-                Prompt:
-              </label>
+         
               <textarea
                 className="w-full p-2 border border-gray-500 rounded text-sm text-white resize-none"
                 value={regenerationPrompt}
                 onChange={(e) => setRegenerationPrompt(e.target.value)}
                 rows={3}
                 style={{ height: "80px" }}
+                placeholder="Enter prompt here..."
               />
             </div>
 
-            <div className="mb-4 flex flex-col">
-              <label className="block text-sm font-medium text-gray-500 mb-1">
-                Seed:
-              </label>
-              <input
-                type="text"
-                value={seed}
-                onChange={handleSeedChange}
-                className="w-20 p-2 border rounded text-sm"
-              />
-              <span className="mt-1 text-xs text-gray-500">
-                Note: Leave blank for random seed
-              </span>
+            <div className="mb-4">
+              <div className="flex items-start gap-4">
+                {/* Seed Input Section */}
+                <div className="">
+      
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={seed}
+                      onChange={handleSeedChange}
+                      className="w-20 p-2 border rounded text-sm"
+                      placeholder="Seed"
+                    />
+                  </div>
+                </div>
+
+                {/* Aspect Ratio Section */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
+                      <ResolutionOption
+                        value="1:1"
+                        currentValue={resolution}
+                        onChange={setResolution}
+                        icon={
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="w-5 h-5 text-white"
+                          >
+                            <rect x="5" y="5" width="15" height="15" />
+                          </svg>
+                        }
+                      />
+                      <ResolutionOption
+                        value="16:9"
+                        currentValue={resolution}
+                        onChange={setResolution}
+                        icon={
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="w-5 h-3.5 text-white"
+                          >
+                            <rect x="0" y="4" width="25" height="16" />
+                          </svg>
+                        }
+                      />
+                      <ResolutionOption
+                        value="9:16"
+                        currentValue={resolution}
+                        onChange={setResolution}
+                        icon={
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="w-3.5 h-5 text-white"
+                          >
+                            <rect x="4" y="0" width="16" height="25" />
+                          </svg>
+                        }
+                      />
+                    </div>
+
+                    {/* OpenPose Toggle and Upload */}
+                    <div className="flex items-center gap-2 ml-2 w-max">
+                      <button
+                        type="button"
+                        onClick={() => setUseOpenPose(!useOpenPose)}
+                        className={`px-3 py-2 border rounded text-sm ${
+                          useOpenPose
+                            ? "bg-gray-700 border-white text-white"
+                            : "border-gray-500 text-gray-400"
+                        }`}
+                      >
+                        OpenPose
+                      </button>
+                      <label
+                        className={`relative ${
+                          !useOpenPose && "opacity-50 cursor-not-allowed"
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={!useOpenPose}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setOpenPoseFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <div
+                          className={`flex items-center gap-2 px-2 py-1 border max-w-[230px] rounded  ${
+                            useOpenPose
+                              ? "bg-white text-black hover:bg-gray-200"
+                              : "bg-gray-500 text-gray-300 border-gray-500"
+                          }`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="w-4 h-4"
+                          >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                          {openPoseFile && (
+                            <span className="text-xs truncate max-w-xs">
+                              {openPoseFile.name}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {regenerationError && (

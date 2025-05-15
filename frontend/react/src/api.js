@@ -101,10 +101,12 @@ export const imagesAPI = {
       }
     });
   },
-regenerateImage: (imageId, caption, seed = null) => {
+regenerateImage: (imageId, caption, seed = null, resolution = "1:1") => {
   const formData = new FormData();
   formData.append('caption', caption);
-  
+  formData.append('resolution', resolution); // Add resolution to form data
+
+  console.log("Resolution api.js:", resolution);
   // Only append seed if it's not null/undefined and not empty string
   if (seed !== null && seed !== undefined && seed !== '') {
     formData.append('seed', seed.toString());
@@ -115,8 +117,7 @@ regenerateImage: (imageId, caption, seed = null) => {
       'Content-Type': 'multipart/form-data'
     }
   });
-}
-
+},
 };
 
 export const tokenService = {
