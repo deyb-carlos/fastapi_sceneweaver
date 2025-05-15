@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Form
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Form, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,11 +48,12 @@ app.add_middleware(
 
 @app.post("/regenerate-image/{image_id}")
 async def regenerate_image(
-    background_tasks: BackgroundTasks,
     image_id: int,
     caption: str = Form(...),
     seed: Optional[int] = Form(None),
     resolution: str = Form(...),
+    isOpenPose: bool = Form(False),
+    pose_img: UploadFile = File(None),
     db: Session = Depends(database.get_db),
     token: str = Depends(auth.oauth2_scheme),
 ):
@@ -77,9 +78,13 @@ async def regenerate_image(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Image not found or not owned by user",
             )
-        
+        pose_image_obj = None
+        if isOpenPose and pose_img:
+            image_data = await pose_img.read()
+            pose_image_obj = Image.open(BytesIO(image_data))
+            
         # Regenerate the image (this will maintain the same filename)
-        generate_single_image(image_id, caption, seed, resolution)
+        generate_single_image(image_id, caption, seed, resolution, isOpenPose, pose_image_obj)
 
         # Update storyboard's updated_at timestamp
         storyboard = (

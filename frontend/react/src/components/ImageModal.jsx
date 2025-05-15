@@ -16,26 +16,47 @@ const ImageModal = ({
     initialImage.caption
   );
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [useOpenPose, setUseOpenPose] = useState(false);
-  const [openPoseImage, setOpenPoseImage] = useState(null);
+  const [isOpenPose, setIsOpenPose] = useState(false);
   const [regenerationError, setRegenerationError] = useState(null);
   const [currentImage, setCurrentImage] = useState(initialImage);
   const [feedbackSelection, setFeedbackSelection] = useState(null);
-  const [aspectRatio, setAspectRatio] = useState("1:1"); // Default to 1:1
+  const [aspectRatio, setAspectRatio] = useState("1:1");
   const [resolution, setResolution] = useState("1:1");
   const [openPoseFile, setOpenPoseFile] = useState(null);
+  const [openPosePreview, setOpenPosePreview] = useState(null);
   useEffect(() => {
     setCurrentImage(initialImage);
     setCaptionEditText(initialImage.caption);
     setRegenerationPrompt(initialImage.caption);
   }, [initialImage]);
-  const handleOpenPoseUpload = (e) => {
+
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setOpenPoseImage(file);
-      // You might want to preview the image or process it here
+      // Validate file type
+      if (!file.type.match("image.*")) {
+        setRegenerationError("Please upload an image file");
+        return;
+      }
+
+      // Validate file size (e.g., 5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setRegenerationError("File size must be less than 5MB");
+        return;
+      }
+
+      setOpenPoseFile(file);
+      setRegenerationError(null);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setOpenPosePreview(event.target.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
+
   const handleRegenerate = async () => {
     try {
       setIsRegenerating(true);
@@ -48,12 +69,16 @@ const ImageModal = ({
       }
 
       console.log("Regenerating image with resolution:", resolution);
+      console.log("isOpen", isOpenPose);
+      console.log("image", openPoseFile);
 
       const regeneratedImage = await onRegenerateImage(
         currentImage.id,
         regenerationPrompt.trim(),
         seedValue,
-        resolution
+        resolution,
+        isOpenPose,
+        openPoseFile
       );
 
       setCurrentImage(regeneratedImage);
@@ -79,17 +104,24 @@ const ImageModal = ({
       setSeed(value);
     }
   };
-  const ResolutionOption = ({ value, currentValue, onChange, icon }) => {
+  const ResolutionOption = ({
+    value,
+    currentValue,
+    onChange,
+    icon,
+    disabled,
+  }) => {
     return (
       <button
         type="button"
-        onClick={() => onChange(value)}
+        onClick={() => !disabled && onChange(value)}
         className={`p-2 border rounded relative group ${
           currentValue === value
             ? "bg-gray-700 border-white"
             : "border-gray-500"
-        }`}
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         aria-label={value}
+        disabled={disabled}
       >
         {icon}
         <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
@@ -130,12 +162,75 @@ const ImageModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-[2000] flex items-center justify-center p-4">
+      {/* Close and Delete Buttons - Moved to top-left */}
+      <div className="absolute top-0 left-0 z-10 flex gap-2 p-2">
+        <button className="text-gray-500 hover:text-gray-300" onClick={onClose}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-8 w-8"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+        <button
+          className="text-gray-500 hover:text-red-400"
+          onClick={onDelete}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          )}
+        </button>
+      </div>
       <div
-        className="relative max-w-8xl w-full mx-auto"
+        className={`relative max-w-8xl w-full mx-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-center items-center gap-6">
           {/* Image Container */}
+
           <div
             className={`relative bg-white rounded-lg overflow-hidden shadow-xl transition-all duration-500 ease-in-out ${
               showRegenerationPanel
@@ -149,69 +244,6 @@ const ImageModal = ({
                 : "transform translate-x-0"
             }`}
           >
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 z-10"
-              onClick={onClose}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <button
-              className="absolute top-2 right-12 text-gray-500 hover:text-red-400 z-10"
-              onClick={onDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              )}
-            </button>
-
             <img
               src={currentImage.image_path || "/placeholder.svg"}
               alt="Enlarged storyboard image"
@@ -381,24 +413,22 @@ const ImageModal = ({
           </div>
 
           {/* Regeneration Panel */}
-          {/* Regeneration Panel */}
           <div
-            className={`w-150 bg-black border border-gray-500 rounded-lg shadow-xl p-4 h-fit flex flex-col justify-center absolute transition-all duration-500 ease-in-out ${
+            className={`w-150 mr-20 bg-black border border-gray-500 rounded-lg shadow-xl p-4 h-fit flex flex-col justify-center absolute right-0 transition-all duration-300 ease-out ${
               showRegenerationPanel
-                ? `opacity-100 transform ${
-                    aspectRatio === "16:9"
-                      ? "translate-x-120"
-                      : aspectRatio === "9:16"
-                      ? "translate-x-68"
-                      : "translate-x-85"
-                  } z-10`
-                : "opacity-0 transform translate-x-0 -z-10"
+                ? "opacity-100 translate-x-0 z-10"
+                : "opacity-0 translate-x-full -z-10"
             }`}
+            style={{
+              transform: showRegenerationPanel
+                ? "translateX(0)"
+                : "translateX(100%)",
+              transitionProperty: "transform, opacity",
+            }}
           >
             <h3 className="font-semibold text-white mb-3">Regenerate Image</h3>
 
             <div className="mb-4">
-         
               <textarea
                 className="w-full p-2 border border-gray-500 rounded text-sm text-white resize-none"
                 value={regenerationPrompt}
@@ -413,7 +443,6 @@ const ImageModal = ({
               <div className="flex items-start gap-4">
                 {/* Seed Input Section */}
                 <div className="">
-      
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
@@ -445,6 +474,7 @@ const ImageModal = ({
                             <rect x="5" y="5" width="15" height="15" />
                           </svg>
                         }
+                        disabled={isOpenPose}
                       />
                       <ResolutionOption
                         value="16:9"
@@ -462,6 +492,7 @@ const ImageModal = ({
                             <rect x="0" y="4" width="25" height="16" />
                           </svg>
                         }
+                        disabled={isOpenPose}
                       />
                       <ResolutionOption
                         value="9:16"
@@ -479,6 +510,7 @@ const ImageModal = ({
                             <rect x="4" y="0" width="16" height="25" />
                           </svg>
                         }
+                        disabled={isOpenPose}
                       />
                     </div>
 
@@ -486,9 +518,9 @@ const ImageModal = ({
                     <div className="flex items-center gap-2 ml-2 w-max">
                       <button
                         type="button"
-                        onClick={() => setUseOpenPose(!useOpenPose)}
+                        onClick={() => setIsOpenPose(!isOpenPose)}
                         className={`px-3 py-2 border rounded text-sm ${
-                          useOpenPose
+                          isOpenPose
                             ? "bg-gray-700 border-white text-white"
                             : "border-gray-500 text-gray-400"
                         }`}
@@ -497,23 +529,19 @@ const ImageModal = ({
                       </button>
                       <label
                         className={`relative ${
-                          !useOpenPose && "opacity-50 cursor-not-allowed"
+                          !isOpenPose && "opacity-50 cursor-not-allowed"
                         }`}
                       >
                         <input
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          disabled={!useOpenPose}
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              setOpenPoseFile(e.target.files[0]);
-                            }
-                          }}
+                          disabled={!isOpenPose}
+                          onChange={handleFileChange}
                         />
                         <div
                           className={`flex items-center gap-2 px-2 py-1 border max-w-[230px] rounded  ${
-                            useOpenPose
+                            isOpenPose
                               ? "bg-white text-black hover:bg-gray-200"
                               : "bg-gray-500 text-gray-300 border-gray-500"
                           }`}
@@ -541,6 +569,40 @@ const ImageModal = ({
                   </div>
                 </div>
               </div>
+              {isOpenPose && openPosePreview && (
+                <div className="mt-4">
+                  <p className="text-sm text-white mb-2">OpenPose Preview:</p>
+                  <div className="relative w-full h-100 border border-gray-500 rounded overflow-hidden">
+                    <img
+                      src={openPosePreview}
+                      alt="OpenPose preview"
+                      className="w-full h-full object-contain"
+                    />
+                    <button
+                      className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75"
+                      onClick={() => {
+                        setOpenPoseFile(null);
+                        setOpenPosePreview(null);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {regenerationError && (
@@ -551,7 +613,7 @@ const ImageModal = ({
               <button
                 className="px-3 py-2 bg-white text-black rounded hover:bg-gray-800 disabled:bg-gray-400"
                 onClick={handleRegenerate}
-                disabled={isRegenerating}
+                disabled={isRegenerating || (isOpenPose && !openPoseFile)}
               >
                 {isRegenerating ? "Regenerating..." : "Regenerate"}
               </button>

@@ -25,6 +25,7 @@ const Storyboard = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionEditText, setCaptionEditText] = useState("");
+  
   const [prevTextAreaState, setPrevTextAreaState] =
     useState(isTextAreaCollapsed);
 
@@ -116,9 +117,9 @@ const Storyboard = () => {
       setIsGenerating(false);
     }
   };
-  const handleRegenerateImage = async (imageId, caption, seed, resolution) => {
+  const handleRegenerateImage = async (imageId, caption, seed, resolution, isOpenPose, pose_img) => {
     try {
-      await imagesAPI.regenerateImage(imageId, caption, seed, resolution);
+      await imagesAPI.regenerateImage(imageId, caption, seed, resolution, isOpenPose, pose_img);
       // Refresh the images after regeneration
       const response = await imagesAPI.getImages(id);
       if (response.data) {

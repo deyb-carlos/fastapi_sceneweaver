@@ -101,17 +101,24 @@ export const imagesAPI = {
       }
     });
   },
-regenerateImage: (imageId, caption, seed = null, resolution = "1:1") => {
+regenerateImage: (imageId, caption, seed = null, resolution = "1:1", isOpenPose = false, pose_img = null) => {
   const formData = new FormData();
   formData.append('caption', caption);
-  formData.append('resolution', resolution); // Add resolution to form data
+  formData.append('resolution', resolution); 
+  formData.append('isOpenPose', isOpenPose.toString());
 
   console.log("Resolution api.js:", resolution);
-  // Only append seed if it's not null/undefined and not empty string
+    console.log("open api.js:", isOpenPose);
+    console.log("pose_img api.js:", pose_img);
+
   if (seed !== null && seed !== undefined && seed !== '') {
     formData.append('seed', seed.toString());
   }
-  
+
+  if (isOpenPose && pose_img) {
+    formData.append('pose_img', pose_img);
+  }
+
   return API.post(`/regenerate-image/${imageId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'

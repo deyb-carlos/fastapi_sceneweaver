@@ -1,4 +1,10 @@
-from diffusers import StableDiffusionXLPipeline, AutoencoderKL, UniPCMultistepScheduler
+from diffusers import (
+    StableDiffusionXLPipeline,
+    StableDiffusionXLAdapterPipeline,
+    AutoencoderKL,
+    UniPCMultistepScheduler,
+    T2IAdapter,
+)
 import torch, os
 from PIL import Image
 from io import BytesIO
@@ -6,7 +12,12 @@ import models
 from database import SessionLocal
 from text_processor import get_resolved_sentences, detect_and_translate_to_english
 from s3 import upload_image_to_s3
+from diffusers.utils import load_image
 import random
+from controlnet_aux import OpenposeDetector
+import numpy as np
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 vae = AutoencoderKL.from_pretrained(
     "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16, use_safetensors=True
@@ -18,11 +29,11 @@ pipe = StableDiffusionXLPipeline.from_pretrained(
     torch_dtype=torch.float16,
     variant="fp16",
     use_safetensors=True,
-).to("cuda")
+)
 
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
 pipe.enable_model_cpu_offload()
-
+pipe.enable_xformers_memory_efficient_attention()
 # Load LoRA weights
 pipe.load_lora_weights(
     "safetensors/Storyboard_sketch.safetensors", adapter_name="sketch"
@@ -30,7 +41,31 @@ pipe.load_lora_weights(
 pipe.load_lora_weights("safetensors/anglesv2.safetensors", adapter_name="angles")
 pipe.set_adapters(["sketch", "angles"], adapter_weights=[0.5, 0.5])
 
-generator = torch.Generator(device="cuda")
+generator = torch.Generator(device)
+
+
+openpose = OpenposeDetector.from_pretrained("lllyasviel/ControlNet")
+
+adapter = T2IAdapter.from_pretrained(
+    "TencentARC/t2i-adapter-openpose-sdxl-1.0", torch_dtype=torch.float16
+)
+
+posepipe = StableDiffusionXLAdapterPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0",
+    adapter=adapter,
+    vae=vae,
+    torch_dtype=torch.float16,
+    variant="fp16",
+    use_safetensors=True,
+)
+posepipe.enable_model_cpu_offload()
+posepipe.scheduler = UniPCMultistepScheduler.from_config(posepipe.scheduler.config)
+posepipe.enable_xformers_memory_efficient_attention()
+posepipe.load_lora_weights(
+    "safetensors/Storyboard_sketch.safetensors", adapter_name="sketch"
+)
+posepipe.load_lora_weights("safetensors/anglesv2.safetensors", adapter_name="angles")
+posepipe.set_adapters(["sketch", "angles"], adapter_weights=[0.5, 0.5])
 
 
 def get_dimensions(resolution: str) -> tuple[int, int]:
@@ -87,7 +122,12 @@ def generate_batch_images(story: str, storyboard_id: int, resolution: str = "1:1
 
 
 def generate_single_image(
-    image_id: int, caption: str, seed: int = None, resolution: str = "1:1"
+    image_id: int,
+    caption: str,
+    seed: int = None,
+    resolution: str = "1:1",
+    isOpenPose: bool = False,
+    pose_img: Image.Image = None,
 ):
     db = SessionLocal()
     try:
@@ -96,24 +136,38 @@ def generate_single_image(
         processed_caption = detect_and_translate_to_english(caption)
         width, height = get_dimensions(resolution)
         seed = seed if seed is not None else random.randint(0, 2**32 - 1)
-        gen = torch.Generator(
-            device="cuda" if torch.cuda.is_available() else "cpu"
-        ).manual_seed(seed)
+        gen = torch.Generator(device).manual_seed(seed)
 
         if not db_image:
             raise ValueError(f"Image with id {image_id} not found.")
 
-        # Generate image
-        result = pipe(
-            prompt=f"Storyboard sketch of {processed_caption}, black and white, cinematic, high quality",
-            negative_prompt="ugly, deformed, disfigured, poor details, bad anatomy, abstract, bad physics",
-            guidance_scale=8.5,
-            num_inference_steps=30,
-            width=width,
-            height=height,
-            generator=gen,
-        )
-      
+        if isOpenPose:
+
+
+            image = openpose(pose_img, detect_resolution=512, image_resolution=1024)
+            image = np.array(image)[:, :, ::-1]
+            image = Image.fromarray(np.uint8(image))
+
+            result = posepipe(
+                prompt=f"Storyboard sketch of {processed_caption}, black and white, cinematic, high quality",
+                negative_prompt="ugly, deformed, disfigured, poor details, bad anatomy, abstract, bad physics",
+                image=image,
+                adapter_conditioning_scale=1,
+                guidance_scale=8.5,
+                num_inference_steps=30,
+                generator=gen,
+            )
+
+        else:
+            result = pipe(
+                prompt=f"Storyboard sketch of {processed_caption}, black and white, cinematic, high quality",
+                negative_prompt="ugly, deformed, disfigured, poor details, bad anatomy, abstract, bad physics",
+                guidance_scale=8.5,
+                num_inference_steps=30,
+                width=width,
+                height=height,
+                generator=gen,
+            )
 
         # Save and upload
         image = result.images[0]
@@ -121,7 +175,6 @@ def generate_single_image(
         image.save(buf, format="JPEG")
         buf.seek(0)
 
-        # Use the same file name to overwrite (optional: delete old one if needed)
         s3_url = upload_image_to_s3(
             buf.read(),
             f"image_{image_id}.jpg",
