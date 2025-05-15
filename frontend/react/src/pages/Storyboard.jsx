@@ -25,7 +25,8 @@ const Storyboard = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionEditText, setCaptionEditText] = useState("");
-  
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [feedbackSelection, setFeedbackSelection] = useState(null);
   const [prevTextAreaState, setPrevTextAreaState] =
     useState(isTextAreaCollapsed);
 
@@ -246,6 +247,10 @@ const Storyboard = () => {
                 setIsDeleting(false);
               }
             }}
+            feedbackSelection={feedbackSelection}
+            setFeedbackSelection={setFeedbackSelection}
+            isRegenerating={isRegenerating}
+            setIsRegenerating={setIsRegenerating}
             onRegenerateImage={handleRegenerateImage}
             isDeleting={isDeleting}
             onCaptionUpdate={handleUpdateCaption}

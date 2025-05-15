@@ -65,11 +65,34 @@ function Register() {
       isValid = false;
     }
 
+    const allowedSpecialChars = /[!@#$%^&*()_+\-{}\[\]\\|:,.<>?~]/;
+    
     if (!formData.password) {
       newErrors.password = "Password is required.";
       isValid = false;
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters long.";
+      isValid = false;
+    } else if (/\s/.test(formData.password)) {
+      newErrors.password = "Password cannot contain spaces.";
+      isValid = false;
+    } else if (!/[A-Z]/.test(formData.password)) {
+      newErrors.password =
+        "Password must contain at least one uppercase letter.";
+      isValid = false;
+    } else if (!/[a-z]/.test(formData.password)) {
+      newErrors.password =
+        "Password must contain at least one lowercase letter.";
+      isValid = false;
+    } else if (!/[0-9]/.test(formData.password)) {
+      newErrors.password = "Password must contain at least one number.";
+      isValid = false;
+    } else if (!allowedSpecialChars.test(formData.password)) {
+      newErrors.password =
+        "Password must contain at least one of these special characters: !@#$%^&*()_+-{}[]\\|:,.<>?~";
+      isValid = false;
+    } else if (/[<>'"`;=]/.test(formData.password)) {
+      newErrors.password = "Password contains invalid special characters.";
       isValid = false;
     }
 
@@ -129,7 +152,6 @@ function Register() {
               email: "Email is already registered. Please use another email.",
             }));
           } else if (Array.isArray(responseData.detail)) {
-          
             setErrors((prev) => ({
               ...prev,
               general: responseData.detail.join(", "),

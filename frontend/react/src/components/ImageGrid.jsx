@@ -12,16 +12,16 @@ const ImageGrid = ({
 }) => {
   return (
     <div
-      className={`overflow-y-auto p-8 relative bg-[radial-gradient(circle_at_center,#e5e7eb_1px,transparent_1px)] bg-[length:20px_20px] ${
-        isTextAreaCollapsed ? "w-[90%] mx-auto" : "w-[70%]"
+      className={`overflow-y-auto p-4 md:p-8 relative bg-[radial-gradient(circle_at_center,#e5e7eb_1px,transparent_1px)] bg-[length:20px_20px] ${
+        isTextAreaCollapsed ? "w-full md:w-[90%] mx-auto" : "w-full md:w-[70%]"
       } scrollbar-hide`}
     >
       {isTextAreaCollapsed && (
         <button
           onClick={onExpandPanel}
           className={`fixed top-16 mt-5 z-[1001] transition-all duration-300 ${
-            sidebarOpen ? "left-[270px]" : "left-5"
-          } flex items-center justify-center h-10 w-10 bg-gray rounded-md shadow-sm border border-gray-200 hover:bg-gray-100`}
+            sidebarOpen ? "left-[270px] md:left-[270px] hidden md:flex" : "left-5"
+          } flex items-center justify-center h-10 w-10 bg-gray-100 rounded-md shadow-sm border border-gray-200 hover:bg-gray-100`}
           title="Expand panel"
         >
           <img
@@ -32,12 +32,13 @@ const ImageGrid = ({
         </button>
       )}
 
+      {/* Rest of your component remains the same */}
       {loading ? (
         <div className="text-center">Loading images...</div>
       ) : storyboardImages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full">
           <div className="text-center max-w-md">
-            <h2 className="text-2xl font-bold text-gray-700 mb-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-700 mb-4">
               No Storyboard Images Yet
             </h2>
             <p className="text-gray-500 mb-6">
@@ -47,7 +48,7 @@ const ImageGrid = ({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 relative z-0">
           {storyboardImages.slice(currentIndex, currentIndex + 6).map((image, i) => (
             <div key={i} className="flex flex-col">
               <div

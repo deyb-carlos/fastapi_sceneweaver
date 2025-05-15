@@ -4,7 +4,7 @@ import { storyboardAPI, authAPI, tokenService } from "../api";
 
 const Home = () => {
   const navigate = useNavigate();
-
+  const MAX_NAME_LENGTH = 70;
   const token = localStorage.getItem("token");
 
   const [storyboards, setStoryboards] = useState([]);
@@ -16,7 +16,6 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [username, setUsername] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
-    
     show: false,
     storyboardId: null,
     storyboardName: "",
@@ -24,7 +23,7 @@ const Home = () => {
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
-const sortedStoryboards = sortStoryboards(storyboards, sortMode);
+  const sortedStoryboards = sortStoryboards(storyboards, sortMode);
   function sortStoryboards(list, mode) {
     if (mode === "az") {
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
@@ -42,23 +41,22 @@ const sortedStoryboards = sortStoryboards(storyboards, sortMode);
     }
   }, [sortMode]);
 
-useEffect(() => {
-  const fetchStoryboards = async () => {
-    try {
-      setIsLoading(true);
-      const response = await storyboardAPI.getAll();
-      setStoryboards(response.data || []);
-    } catch (error) {
-      console.error("Failed to fetch storyboards:", error);
-      setStoryboards([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchStoryboards = async () => {
+      try {
+        setIsLoading(true);
+        const response = await storyboardAPI.getAll();
+        setStoryboards(response.data || []);
+      } catch (error) {
+        console.error("Failed to fetch storyboards:", error);
+        setStoryboards([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  fetchStoryboards();
-}, []);
-
+    fetchStoryboards();
+  }, []);
 
   useEffect(() => {
     const refreshInterval = 24 * 60 * 60 * 1000;
@@ -102,6 +100,10 @@ useEffect(() => {
 
   const handleSaveStoryboard = async () => {
     if (!newStoryboardName.trim() || isProcessing) return;
+    if (newStoryboardName.length > MAX_NAME_LENGTH) {
+      setError(`Name must be ${MAX_NAME_LENGTH} characters or less`);
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -441,7 +443,7 @@ useEffect(() => {
             </h2>
             <p className="mb-6 text-black">
               Are you sure you want to delete "
-              <span className="font-medium">
+              <span className="font-medium break-all line-clamp-3">
                 <b>{deleteConfirmation.storyboardName}</b>
               </span>
               "? This action cannot be undone.
@@ -510,20 +512,28 @@ useEffect(() => {
                 : "Create New Storyboard"}
             </h2>
 
-            <input
-              type="text"
-              value={newStoryboardName}
-              onChange={(e) => {
-                setNewStoryboardName(e.target.value);
-                setError(null); // Clear error when typing
-              }}
-              placeholder="Enter storyboard name"
-              className={`w-full px-4 py-2 border ${
-                error ? "border-red-500" : "border-gray-300"
-              } rounded-lg focus:ring-0 focus:ring-offset-0 focus:border-gray-400 text-black placeholder-gray-400`}
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && handleSaveStoryboard()}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={newStoryboardName}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_NAME_LENGTH) {
+                    setNewStoryboardName(e.target.value);
+                    setError(null);
+                  }
+                }}
+                placeholder="Enter storyboard name"
+                className={`w-full px-4 py-2 border ${
+                  error ? "border-red-500" : "border-gray-300"
+                } rounded-lg focus:ring-0 focus:ring-offset-0 focus:border-gray-400 text-black placeholder-gray-400`}
+                autoFocus
+                maxLength={MAX_NAME_LENGTH}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveStoryboard()}
+              />
+              <div className="absolute right-2 top-2 text-xs text-gray-400">
+                {newStoryboardName.length}/{MAX_NAME_LENGTH}
+              </div>
+            </div>
             {/* Error message display */}
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             <div className="mt-6 flex justify-end space-x-3">

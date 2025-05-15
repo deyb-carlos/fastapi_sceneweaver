@@ -11,9 +11,9 @@ const NavigationButtons = ({
     <>
       <button
         onClick={onPrev}
-        className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
+        className={`hidden md:block fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-8 h-8 md:w-10 md:h-10 rounded-full shadow z-10 transition-all duration-300 ${
           isTextAreaCollapsed
-            ? "left-4 opacity-100"
+            ? "left-2 md:left-4 opacity-100"
             : sidebarOpen
             ? "left-[calc(30%+190px+20px)] opacity-100"
             : "left-[calc(30%+20px)] opacity-100"
@@ -21,7 +21,7 @@ const NavigationButtons = ({
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5 mx-auto"
+          className="h-4 w-4 md:h-5 md:w-5 mx-auto"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -37,8 +37,8 @@ const NavigationButtons = ({
 
       <button
         onClick={onNext}
-        className={`fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-10 h-10 rounded-full shadow z-10 transition-all duration-300 ${
-          sidebarOpen ? "right-4" : "right-4"
+        className={`hidden md:block fixed top-1/2 transform -translate-y-1/2 bg-gray-700 hover:bg-gray-500 text-xl w-8 h-8 md:w-10 md:h-10 rounded-full shadow z-10 transition-all duration-300 ${
+          sidebarOpen ? "right-2 md:right-4" : "right-2 md:right-4"
         }`}
         style={{
           transition: "opacity 300ms ease",
@@ -51,7 +51,7 @@ const NavigationButtons = ({
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5 mx-auto"
+          className="h-4 w-4 md:h-5 md:w-5 mx-auto"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
