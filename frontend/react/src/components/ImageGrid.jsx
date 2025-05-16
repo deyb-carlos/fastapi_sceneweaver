@@ -19,16 +19,16 @@ const ImageGrid = ({
       {isTextAreaCollapsed && (
         <button
           onClick={onExpandPanel}
-          className={`fixed top-16 mt-5 z-[1001] transition-all duration-300 ${
-            sidebarOpen ? "left-[270px] md:left-[270px] hidden md:flex" : "left-5"
-          } flex items-center justify-center h-10 w-10 bg-gray-100 rounded-md shadow-sm border border-gray-200 hover:bg-gray-100`}
+          className={` fixed top-16 mt-5 z-[1001] transition-all duration-300 ${
+            sidebarOpen ? "left-[270px] md:left-[270px] hidden md:flex " : "left-5"
+          } flex items-center justify-center h-10 w-10 bg-gray-100 rounded-md shadow-sm border-2 border-black hover:bg-gray-300`}
           title="Expand panel"
         >
           <img
             src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/comment.png"
             alt="Expand panel"
-            className="h-6 w-6 object-contain"
-          />
+            className="h-6 w-6 object-contain "
+          />  
         </button>
       )}
 

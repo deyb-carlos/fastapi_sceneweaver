@@ -20,26 +20,38 @@ const Storyboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [isGeneratingLong, setIsGeneratingLong] = useState(false);
   const [isTextAreaCollapsed, setIsTextAreaCollapsed] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionEditText, setCaptionEditText] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [feedbackSelection, setFeedbackSelection] = useState(null);
-  const [prevTextAreaState, setPrevTextAreaState] =
-    useState(isTextAreaCollapsed);
 
-  const imageCountRef = useRef(0);
+  const [generationStatus, setGenerationStatus] = useState({
+    isGenerating: false,
+    current: 0,
+    total: 0,
+    progress: 0,
+  });
+  const [showGenerationIndicator, setShowGenerationIndicator] = useState(false);
+
+  const initialImageCountRef = useRef(0);
+  const pollingIntervalRef = useRef(null);
 
   const toggleTextArea = () => {
     setIsTextAreaCollapsed(!isTextAreaCollapsed);
   };
+
   const sortImagesById = (images) => {
     return [...images].sort((a, b) => a.id - b.id);
   };
 
-  // Keyboard navigation effect
+  const countSentences = (text) => {
+    if (!text) return 0;
+    const sentences = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+/g);
+    return sentences ? sentences.length : 1;
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "ArrowRight") {
@@ -53,7 +65,6 @@ const Storyboard = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, storyboardImages.length]);
 
-  // Fetch images effect
   useEffect(() => {
     const fetchImages = async () => {
       setLoading(true);
@@ -62,7 +73,9 @@ const Storyboard = () => {
       try {
         const response = await imagesAPI.getImages(id);
         if (response.data && Array.isArray(response.data)) {
-          setStoryboardImages(sortImagesById(response.data));
+          const sortedImages = sortImagesById(response.data);
+          setStoryboardImages(sortedImages);
+          initialImageCountRef.current = sortedImages.length;
         } else {
           setError("No images found.");
         }
@@ -76,18 +89,39 @@ const Storyboard = () => {
     if (id) fetchImages();
   }, [id]);
 
-  // Polling effect
   useEffect(() => {
-    const pollInterval = 3000;
-
     const pollForImages = async () => {
       try {
         const response = await imagesAPI.getImages(id);
         if (response.data && Array.isArray(response.data)) {
-          if (response.data.length !== imageCountRef.current) {
-            imageCountRef.current = response.data.length;
-            setStoryboardImages(sortImagesById(response.data));
-            setIsGenerating(false);
+          const newImages = sortImagesById(response.data);
+          const currentTotalImages = newImages.length;
+          const newImagesCount =
+            currentTotalImages - initialImageCountRef.current;
+
+          if (newImagesCount > 0) {
+            setGenerationStatus((prev) => {
+              const newProgress = Math.min(
+                Math.round((newImagesCount / prev.total) * 100),
+                100
+              );
+
+              return {
+                ...prev,
+                current: newImagesCount,
+                progress: newProgress,
+              };
+            });
+
+            setStoryboardImages(newImages);
+          }
+
+          // Check if generation is complete
+          if (
+            generationStatus.total > 0 &&
+            newImagesCount >= generationStatus.total
+          ) {
+            completeGeneration();
           }
         }
       } catch (err) {
@@ -95,37 +129,90 @@ const Storyboard = () => {
       }
     };
 
-    const intervalId = setInterval(pollForImages, pollInterval);
-    pollForImages();
-    return () => clearInterval(intervalId);
-  }, [id]);
+    if (generationStatus.isGenerating) {
+      // Clear any existing interval
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+
+      // Start new polling interval
+      pollingIntervalRef.current = setInterval(pollForImages, 3000);
+      // Immediate first poll
+      pollForImages();
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [generationStatus.isGenerating, id, generationStatus.total]);
+
+  const completeGeneration = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    setIsGenerating(false);
+    setShowGenerationIndicator(false);
+    setGenerationStatus({
+      isGenerating: false,
+      current: 0,
+      total: 0,
+      progress: 0,
+    });
+    initialImageCountRef.current = storyboardImages.length;
+  };
 
   const handleGenerateImages = async (e) => {
     e.preventDefault();
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || isGenerating) return;
 
     try {
+      const sentenceCount = countSentences(userInput);
+      initialImageCountRef.current = storyboardImages.length;
+
       setIsGenerating(true);
-      setIsGeneratingLong(true);
+      setGenerationStatus({
+        isGenerating: true,
+        current: 0,
+        total: sentenceCount,
+        progress: 0,
+      });
+      setShowGenerationIndicator(true);
+
       const formData = new FormData();
       formData.append("story", userInput);
       formData.append("resolution", resolution);
+
       await imagesAPI.generateImages(id, formData);
     } catch (error) {
       console.error("Error generating images:", error);
-      alert("Failed to start image generation. Please try again.");
-    } finally {
-      setIsGenerating(false);
+      completeGeneration();
     }
   };
-  const handleRegenerateImage = async (imageId, caption, seed, resolution, isOpenPose, pose_img) => {
+
+  const handleRegenerateImage = async (
+    imageId,
+    caption,
+    seed,
+    resolution,
+    isOpenPose,
+    pose_img
+  ) => {
     try {
-      await imagesAPI.regenerateImage(imageId, caption, seed, resolution, isOpenPose, pose_img);
-      // Refresh the images after regeneration
+      await imagesAPI.regenerateImage(
+        imageId,
+        caption,
+        seed,
+        resolution,
+        isOpenPose,
+        pose_img
+      );
       const response = await imagesAPI.getImages(id);
       if (response.data) {
         setStoryboardImages(sortImagesById(response.data));
-        // Keep the same image selected if it still exists
         const regeneratedImage = response.data.find(
           (img) => img.id === imageId
         );
@@ -144,21 +231,16 @@ const Storyboard = () => {
 
   const handleUpdateCaption = async (imageId, newCaption) => {
     try {
-      // Call your API to update the caption
       await imagesAPI.updateImageCaption(imageId, newCaption);
-
-      // Refresh the images data
       const response = await imagesAPI.getImages(id);
       if (response.data && Array.isArray(response.data)) {
         setStoryboardImages(sortImagesById(response.data));
-        // Find and set the updated image to keep modal open
         const updatedImage = response.data.find((img) => img.id === imageId);
         if (updatedImage) {
           setSelectedImage(updatedImage);
         }
       }
-
-      return true; // Indicate success
+      return true;
     } catch (error) {
       console.error("Error updating caption:", error);
       throw new Error(
@@ -166,6 +248,7 @@ const Storyboard = () => {
       );
     }
   };
+
   const handleNext = (e) => {
     if (e) e.preventDefault();
     if (currentIndex + 6 < storyboardImages.length) {
@@ -294,8 +377,81 @@ const Storyboard = () => {
           sidebarOpen={sidebarOpen}
           onPrev={handlePrev}
           onNext={handleNext}
-          prevTextAreaState={prevTextAreaState}
         />
+      )}
+      {showGenerationIndicator && (
+        <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-xl border-2 border-black z-50 w-80">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center">
+              <h3 className="font-medium text-gray-800">
+                {generationStatus.total > 0
+                  ? `Generating ${generationStatus.current} of ${generationStatus.total}`
+                  : "Preparing generation..."}
+              </h3>
+              {/* Add spinner next to generating text when in progress */}
+              {generationStatus.total > 0 && (
+                <svg
+                  className="animate-spin ml-2 h-4 w-4 text-black"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              )}
+            </div>
+            {generationStatus.total > 0 && (
+              <span className="text-sm text-gray-500">
+                {generationStatus.progress}%
+              </span>
+            )}
+          </div>
+
+          {generationStatus.total > 0 ? (
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-black h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${generationStatus.progress}%` }}
+              ></div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-2">
+              <svg
+                className="animate-spin -ml-1 mr-2 h-5 w-5 text-black"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span className="text-sm text-gray-600">Initializing...</span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

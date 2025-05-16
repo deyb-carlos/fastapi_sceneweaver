@@ -29,7 +29,7 @@ const TextInputPanel = ({
           className="h-5 w-5"
           fill="none"
           viewBox="0 0 24 24"
-          stroke="currentColor"
+          stroke="black"
         >
           <path
             strokeLinecap="round"
@@ -46,7 +46,7 @@ const TextInputPanel = ({
           onChange={(e) => setUserInput(e.target.value)}
           placeholder="Enter your story to generate storyboard..."
           rows={6}
-          className={`flex-grow resize-none p-3 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-800 md:rows-10 transition-opacity duration-300 ${
+          className={`flex-grow resize-none p-3 bg-white border-2 border-black rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-800 md:rows-10 transition-opacity duration-300 ${
             isCollapsed ? "opacity-0" : "opacity-100"
           }`}
         />
@@ -136,7 +136,11 @@ const TextInputPanel = ({
             <button
               type="submit"
               disabled={isGenerating}
-              className="flex-grow bg-black hover:bg-gray-500 px-4 py-2 rounded-lg cursor-pointer text-white hover:text-gray-700 disabled:bg-gray-400 transition-transform duration-200 hover:scale-[1.02]"
+              className={`flex-grow px-4 py-2 rounded-lg transition-transform duration-200 ${
+                isGenerating
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-500 hover:text-gray-700 hover:scale-[1.02] cursor-pointer"
+              }`}
             >
               {isGenerating ? "Generating..." : "Generate"}
             </button>
@@ -198,13 +202,18 @@ const TextInputPanel = ({
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="bg-black hover:bg-gray-500 px-4 py-2 rounded-lg cursor-pointer text-white hover:text-gray-700 disabled:bg-gray-400 transition-transform duration-200 hover:scale-[1.02]"
-            >
-              {isGenerating ? "Generating..." : "Generate"}
-            </button>
+         <button
+  type="submit"
+  disabled={isGenerating}
+  className={`px-4 py-2 rounded-lg text-white transition-transform duration-200 ${
+    isGenerating
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-black hover:bg-gray-500 hover:text-gray-700 hover:scale-[1.02] cursor-pointer"
+  }`}
+>
+  {isGenerating ? "Generating..." : "Generate"}
+</button>
+
           </div>
         </div>
       </form>
@@ -226,7 +235,7 @@ const ResolutionOption = ({ value, currentValue, onChange, icon }) => {
       <div
         className={`w-8 h-8 md:w-10 md:h-10 rounded-lg cursor-pointer flex items-center justify-center transition-all duration-300 ${
           currentValue === value
-            ? "bg-gray-300 scale-105"
+            ? "bg-gray-300 scale-105 border-2 border-black"
             : "bg-gray-100 hover:bg-gray-200 hover:scale-105"
         }`}
       >

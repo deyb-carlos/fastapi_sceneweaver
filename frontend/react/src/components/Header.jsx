@@ -60,7 +60,7 @@ const Header = ({ isSidebarOpen, storyboardName, onNavigateHome, onToggleSidebar
       {/* Storyboard Name with smoother text scaling */}
       <div className="ml-2 flex-grow min-w-0 transition-all duration-300">
         <h1 className="text-base font-bold text-gray-800 md:text-xl line-clamp-2 md:line-clamp-1">
-          <span className="text-black text-xl md:text-4xl transition-all duration-300">
+          <span className="text-black text-xl md:text-2xl transition-all duration-300">
             {storyboardName}
           </span>
         </h1>
