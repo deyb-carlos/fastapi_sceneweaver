@@ -11,7 +11,10 @@ const ImageGrid = ({
   onExpandPanel,
 }) => {
   // Determine the number of images to show based on screen size
-  const imagesToShow = window.innerWidth < 640 ? storyboardImages : storyboardImages.slice(currentIndex, currentIndex + 6);
+  const imagesToShow =
+    window.innerWidth < 640
+      ? storyboardImages
+      : storyboardImages.slice(currentIndex, currentIndex + 6);
 
   return (
     <div
@@ -23,7 +26,9 @@ const ImageGrid = ({
         <button
           onClick={onExpandPanel}
           className={` fixed top-16 mt-5 z-[1001] transition-all duration-300 ${
-            sidebarOpen ? "left-[270px] md:left-[270px] hidden md:flex " : "left-5"
+            sidebarOpen
+              ? "left-[270px] md:left-[270px] hidden md:flex "
+              : "left-5"
           } flex items-center justify-center h-10 w-10 bg-gray-100 rounded-md shadow-sm border-2 border-black hover:bg-gray-300`}
           title="Expand panel"
         >
@@ -31,7 +36,7 @@ const ImageGrid = ({
             src="https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/comment.png"
             alt="Expand panel"
             className="h-6 w-6 object-contain "
-          />  
+          />
         </button>
       )}
 
@@ -44,8 +49,8 @@ const ImageGrid = ({
               No Storyboard Images Yet
             </h2>
             <p className="text-gray-500 mb-6">
-              Enter your story in the left panel and click "Generate" to create your first
-              storyboard images.
+              Enter your story in the left panel and click "Generate" to create
+              your first storyboard images.
             </p>
           </div>
         </div>
@@ -64,7 +69,10 @@ const ImageGrid = ({
                 />
               </div>
               <div className="mt-2 p-2 text-gray-800 font-semibold text-sm bg-white rounded-lg border border-gray-100 min-h-[60px] max-h-[100px] overflow-y-auto">
-                <p className="text-xs mb-1">Caption {window.innerWidth < 640 ? i + 1 : currentIndex + i + 1}:</p>
+                <p className="text-xs mb-1">
+                  Caption{" "}
+                  {window.innerWidth < 640 ? i + 1 : currentIndex + i + 1}:
+                </p>
                 <p className="font-normal text-sm break-words whitespace-normal overflow-hidden">
                   {image.caption}
                 </p>
