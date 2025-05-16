@@ -26,14 +26,14 @@ vae = AutoencoderKL.from_pretrained(
 pipe = StableDiffusionXLPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-base-1.0",
     vae=vae,
-    torch_dtype=torch.float16,
+    torch_dtype=torch.float32,
     variant="fp16",
     use_safetensors=True,
 )
 
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
 pipe.enable_model_cpu_offload()
-pipe.enable_xformers_memory_efficient_attention()
+
 # Load LoRA weights
 pipe.load_lora_weights(
     "safetensors/Storyboard_sketch.safetensors", adapter_name="sketch"
@@ -54,13 +54,13 @@ posepipe = StableDiffusionXLAdapterPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-base-1.0",
     adapter=adapter,
     vae=vae,
-    torch_dtype=torch.float16,
+    torch_dtype=torch.float32,
     variant="fp16",
     use_safetensors=True,
 )
 posepipe.enable_model_cpu_offload()
 posepipe.scheduler = UniPCMultistepScheduler.from_config(posepipe.scheduler.config)
-posepipe.enable_xformers_memory_efficient_attention()
+
 posepipe.load_lora_weights(
     "safetensors/Storyboard_sketch.safetensors", adapter_name="sketch"
 )
