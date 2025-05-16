@@ -17,57 +17,73 @@ import random
 from controlnet_aux import OpenposeDetector
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Force CPU
+device = torch.device("cpu")
+torch_dtype = torch.float32  # FP32 for better CPU stability
+
+# Load VAE
 vae = AutoencoderKL.from_pretrained(
-    "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16, use_safetensors=True
-)
+    "madebyollin/sdxl-vae-fp16-fix",
+    torch_dtype=torch_dtype,
+    use_safetensors=True
+).to(device)
 
+# Base pipeline (CPU-compatible)
 pipe = StableDiffusionXLPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-base-1.0",
     vae=vae,
-    torch_dtype=torch.float32,
-    variant="fp16",
-    use_safetensors=True,
-)
+    torch_dtype=torch_dtype,
+    variant="fp32",  # Use FP32 variant for CPU
+    use_safetensors=True
+).to(device)
 
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
-pipe.enable_model_cpu_offload()
 
 # Load LoRA weights
 pipe.load_lora_weights(
-    "safetensors/Storyboard_sketch.safetensors", adapter_name="sketch"
+    "safetensors/Storyboard_sketch.safetensors",
+    adapter_name="sketch"
 )
-pipe.load_lora_weights("safetensors/anglesv2.safetensors", adapter_name="angles")
+pipe.load_lora_weights(
+    "safetensors/anglesv2.safetensors",
+    adapter_name="angles"
+)
 pipe.set_adapters(["sketch", "angles"], adapter_weights=[0.5, 0.5])
 
-generator = torch.Generator(device)
+# OpenPose (CPU mode)
+openpose = OpenposeDetector.from_pretrained("lllyasviel/ControlNet").to(device)
 
-
-openpose = OpenposeDetector.from_pretrained("lllyasviel/ControlNet")
-
+# Adapter pipeline
 adapter = T2IAdapter.from_pretrained(
-    "TencentARC/t2i-adapter-openpose-sdxl-1.0", torch_dtype=torch.float16
-)
+    "TencentARC/t2i-adapter-openpose-sdxl-1.0",
+    torch_dtype=torch_dtype
+).to(device)
 
 posepipe = StableDiffusionXLAdapterPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-base-1.0",
     adapter=adapter,
     vae=vae,
-    torch_dtype=torch.float32,
-    variant="fp16",
-    use_safetensors=True,
-)
-posepipe.enable_model_cpu_offload()
+    torch_dtype=torch_dtype,
+    variant="fp32",  # FP32 for CPU
+    use_safetensors=True
+).to(device)
+
 posepipe.scheduler = UniPCMultistepScheduler.from_config(posepipe.scheduler.config)
 
+# Load LoRAs for pose pipeline
 posepipe.load_lora_weights(
-    "safetensors/Storyboard_sketch.safetensors", adapter_name="sketch"
+    "safetensors/Storyboard_sketch.safetensors",
+    adapter_name="sketch"
 )
-posepipe.load_lora_weights("safetensors/anglesv2.safetensors", adapter_name="angles")
+posepipe.load_lora_weights(
+    "safetensors/anglesv2.safetensors",
+    adapter_name="angles"
+)
 posepipe.set_adapters(["sketch", "angles"], adapter_weights=[0.5, 0.5])
 
-
+# Generator for CPU
+generator = torch.Generator(device=device)
 def get_dimensions(resolution: str) -> tuple[int, int]:
     resolution_map = {
         "16:9": (1024, 576),
