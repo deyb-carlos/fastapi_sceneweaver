@@ -48,6 +48,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to SceneWeaver"}
+
 @app.post("/regenerate-image/{image_id}")
 async def regenerate_image(
     image_id: int,
