@@ -1,5 +1,5 @@
 import React from "react";
-import Carousel from "./carousel";
+import Carousel from "./Carousel";
 
 function CollectionSection() {
   const images1 = ["./dog.jpg", "./cat.jpg", "./squirrel.jpg"];
@@ -11,7 +11,9 @@ function CollectionSection() {
       id="collection"
       className="scroll-mt-16 py-8 md:py-16 bg-[#1B1B1B] text-white flex flex-col items-center px-4"
     >
-      <h1 className="text-3xl md:text-4xl font-bold mb-6 md:mb-10 text-center">Collection</h1>
+      <h1 className="text-3xl md:text-4xl font-bold mb-6 md:mb-10 text-center">
+        Collection
+      </h1>
 
       {/* Flex container for carousels */}
       <div className="w-full max-w-400 mx-auto">
