@@ -41,6 +41,7 @@ from batch_generator import generate_batch_images, generate_single_image
 from s3 import delete_image_from_s3
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+import os
 
 app = FastAPI()
 
@@ -59,12 +60,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+FRONTEND_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "..",
+    "..",
+    "frontend",
+    "react",
+    "dist",
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")),
+    name="static",
+)
 
 
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
-    return FileResponse("frontend/react/dist/index.html")
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
 
 @app.get("/")
