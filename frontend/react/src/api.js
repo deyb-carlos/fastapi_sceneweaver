@@ -10,9 +10,7 @@ const API = axios.create({
   baseURL: API_BASE_URL, 
   timeout: 5000,
 });
-const API_BASE_URL = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:8000'
-  : 'http://35.213.136.241:8000';
+
 // Add request interceptor to inject token
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token'); 
