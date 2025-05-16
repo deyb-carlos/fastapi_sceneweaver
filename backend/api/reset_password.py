@@ -16,7 +16,7 @@ conf = ConnectionConfig(
 
 async def send_reset_email(email: str, token: str):
     # Create reset link (frontend URL)
-    reset_link = f"http://localhost:5173/reset-password?token={token}"
+    reset_link = f"http://35.213.136.241:5173/reset-password?token={token}"
     
     message = MessageSchema(
         subject="Password Reset Request",

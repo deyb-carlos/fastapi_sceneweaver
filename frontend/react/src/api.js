@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8000', 
+  baseURL: 'http://35.213.136.241:8000', 
   timeout: 110000,
 });
 
@@ -20,7 +20,7 @@ const refreshToken = async () => {
 
   try {
     const response = await axios.post(
-      'http://localhost:8000/refresh-token',
+      'http://35.213.136.241:8000/refresh-token',
       {},
       {
         headers: {
