@@ -58,12 +58,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
 
 
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
-    return FileResponse("frontend/dist/index.html")
+    return FileResponse("frontend/react/dist/index.html")
 
 
 @app.get("/")
