@@ -18,7 +18,15 @@ BUCKET_NAME = "sceneweaver"
 
 def upload_image_to_s3(image_bytes: bytes, filename: str, folder: str = "images"):
     key = f"{folder}/{uuid4().hex}_{filename}"
-    s3.upload_fileobj(BytesIO(image_bytes), BUCKET_NAME, key, ExtraArgs={"ContentType": "image/jpeg"})
+    s3.upload_fileobj(
+        BytesIO(image_bytes),
+        BUCKET_NAME,
+        key,
+        ExtraArgs={
+            "ContentType": "image/jpeg",
+            "ContentDisposition": f'attachment; filename="{filename}"'
+        }
+    )
     return f"https://{BUCKET_NAME}.s3.ap-southeast-2.amazonaws.com/{key}"
 
 def delete_image_from_s3(image_url: str):

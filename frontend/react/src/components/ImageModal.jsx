@@ -7,7 +7,7 @@ const ImageModal = ({
   isDeleting,
   onCaptionUpdate,
   onRegenerateImage,
-  isRegenerating, 
+  isRegenerating,
   setIsRegenerating,
   feedbackSelection,
   setFeedbackSelection,
@@ -33,10 +33,10 @@ const ImageModal = ({
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
+    window.addEventListener("resize", checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
   useEffect(() => {
@@ -157,7 +157,14 @@ const ImageModal = ({
     if (width < height && height / width === 16 / 9) return "9:16";
     return "1:1";
   };
-
+  const handleDownload = (imageUrl) => {
+    const link = document.createElement("a");
+    link.href = imageUrl;
+    link.download = imageUrl.split("/").pop() || "download.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   useEffect(() => {
     if (currentImage?.image_path) {
       const img = new Image();
@@ -232,13 +239,40 @@ const ImageModal = ({
             </svg>
           )}
         </button>
+        <button
+          className="text-gray-500 hover:text-blue-400"
+          onClick={() => handleDownload(currentImage.image_path)}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`${isMobile ? "h-6 w-6" : "h-8 w-8"}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
+          </svg>
+        </button>
       </div>
-      
+
       <div
-        className={`relative w-full mx-auto ${isMobile ? "max-w-full" : "max-w-8xl"}`}
+        className={`relative w-full mx-auto ${
+          isMobile ? "max-w-full" : "max-w-8xl"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`${isMobile ? "flex flex-col" : "flex justify-center items-center gap-6"}`}>
+        <div
+          className={`${
+            isMobile
+              ? "flex flex-col"
+              : "flex justify-center items-center gap-6"
+          }`}
+        >
           {/* Image Container */}
           <div
             className={`relative bg-white rounded-lg overflow-hidden shadow-xl transition-all duration-500 ease-in-out ${
@@ -256,7 +290,9 @@ const ImageModal = ({
             <img
               src={currentImage.image_path || "/placeholder.svg"}
               alt="Enlarged storyboard image"
-              className={`w-full h-auto ${isMobile ? "max-h-[50vh]" : "max-h-[70vh]"} object-contain`}
+              className={`w-full h-auto ${
+                isMobile ? "max-h-[50vh]" : "max-h-[70vh]"
+              } object-contain`}
             />
 
             {/* Caption Section */}
@@ -428,7 +464,9 @@ const ImageModal = ({
                 showRegenerationPanel ? "block" : "hidden"
               }`}
             >
-              <h3 className="font-semibold text-white mb-3">Regenerate Image</h3>
+              <h3 className="font-semibold text-white mb-3">
+                Regenerate Image
+              </h3>
 
               <div className="mb-4">
                 <textarea
@@ -639,7 +677,9 @@ const ImageModal = ({
                 transitionProperty: "transform, opacity",
               }}
             >
-              <h3 className="font-semibold text-white mb-3">Regenerate Image</h3>
+              <h3 className="font-semibold text-white mb-3">
+                Regenerate Image
+              </h3>
 
               <div className="mb-4">
                 <textarea
