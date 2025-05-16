@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'http://35.213.136.241:8000', 
-  timeout: 110000,
+  timeout: 5000,
 });
 
 // Add request interceptor to inject token
