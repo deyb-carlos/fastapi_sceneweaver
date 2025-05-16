@@ -1,4 +1,13 @@
-from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Form, UploadFile, File
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Depends,
+    status,
+    BackgroundTasks,
+    Form,
+    UploadFile,
+    File,
+)
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,13 +39,15 @@ from reset_password import send_reset_email
 from fastapi import BackgroundTasks
 from batch_generator import generate_batch_images, generate_single_image
 from s3 import delete_image_from_s3
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 
 
 origins = [
     "http://35.213.136.241:5173",
-    "http://localhost:5173",  
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
@@ -47,10 +58,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+
+
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    return FileResponse("frontend/build/index.html")
+
 
 @app.get("/")
 async def root():
     return {"message": "Welcome to SceneWeaver"}
+
 
 @app.post("/regenerate-image/{image_id}")
 async def regenerate_image(
@@ -88,9 +107,11 @@ async def regenerate_image(
         if isOpenPose and pose_img:
             image_data = await pose_img.read()
             pose_image_obj = Image.open(BytesIO(image_data))
-            
+
         # Regenerate the image (this will maintain the same filename)
-        generate_single_image(image_id, caption, seed, resolution, isOpenPose, pose_image_obj)
+        generate_single_image(
+            image_id, caption, seed, resolution, isOpenPose, pose_image_obj
+        )
 
         # Update storyboard's updated_at timestamp
         storyboard = (
@@ -110,7 +131,8 @@ async def regenerate_image(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error regenerating image: {str(e)}",
         )
-    
+
+
 @app.patch("/images/{image_id}/caption")
 async def update_image_caption(
     image_id: int,
@@ -142,7 +164,7 @@ async def update_image_caption(
 
         # Update the caption
         db_image.caption = caption
-        
+
         # Update storyboard's updated_at timestamp
         storyboard = (
             db.query(models.Storyboard)
@@ -151,7 +173,7 @@ async def update_image_caption(
         )
         if storyboard:
             storyboard.updated_at = datetime.now(timezone.utc)
-        
+
         db.commit()
 
         return {"message": "Caption updated successfully"}
@@ -162,7 +184,8 @@ async def update_image_caption(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating caption: {str(e)}",
         )
-       
+
+
 @app.get("/storyboard/images/{storyboard_id}", response_model=List[ImageOut])
 async def get_storyboard_images(
     storyboard_id: int,
@@ -536,8 +559,6 @@ def get_storyboard(
         )
 
 
-
-
 @app.delete("/images/{image_id}")
 def delete_image(
     image_id: int,
@@ -579,7 +600,7 @@ def delete_image(
             .filter(models.Storyboard.id == db_image.storyboard_id)
             .first()
         )
-        
+
         if storyboard:
             # If the deleted image was the thumbnail, update it to the newest remaining image
             if storyboard.thumbnail == db_image.image_path:
@@ -589,7 +610,7 @@ def delete_image(
                     storyboard.thumbnail = newest_image.image_path
                 else:
                     storyboard.thumbnail = "https://sceneweaver.s3.ap-southeast-2.amazonaws.com/assets/thumbnail.png"
-                
+
                 storyboard.updated_at = datetime.now(timezone.utc)
                 db.commit()
 
@@ -601,6 +622,7 @@ def delete_image(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting image: {str(e)}",
         )
+
 
 @app.post("/forgot-password")
 async def forgot_password(
