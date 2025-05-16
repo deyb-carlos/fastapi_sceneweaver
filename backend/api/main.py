@@ -47,7 +47,7 @@ app = FastAPI()
 
 
 origins = [
-    "http://35.213.136.241:5173",
+    "http://35.213.136.241",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://sceneweaverproj.vercel.app/",
