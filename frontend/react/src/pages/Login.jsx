@@ -29,7 +29,7 @@ function Login() {
     formDetails.append("password", password);
 
     try {
-      const response = await fetch("http://localhost:8000/token", {
+      const response = await fetch("http://35.213.136.241:8000/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

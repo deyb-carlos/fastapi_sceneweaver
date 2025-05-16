@@ -1,61 +1,64 @@
-import { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 export default function ResetPassword() {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setIsLoading(true);
 
     if (!token) {
-      setError('Missing or invalid reset token.');
+      setError("Missing or invalid reset token.");
       setIsLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       setIsLoading(false);
       return;
     }
 
     try {
       const formDetails = new URLSearchParams();
-      formDetails.append('token', token);
-      formDetails.append('new_password', password);
+      formDetails.append("token", token);
+      formDetails.append("new_password", password);
 
-      const response = await fetch('http://localhost:8000/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formDetails,
-      });
+      const response = await fetch(
+        "http://35.213.136.241:8000/reset-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formDetails,
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || 'Failed to reset password.');
+        setError(data.detail || "Failed to reset password.");
       } else {
-        setSuccess('Password reset successfully! Redirecting...');
+        setSuccess("Password reset successfully! Redirecting...");
         setTimeout(() => {
-          navigate('/login');
+          navigate("/login");
         }, 2000);
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +77,7 @@ export default function ResetPassword() {
               draggable="false"
             />
           </h1>
-          <h2 
+          <h2
             className="text-2xl md:text-3xl font-bold text-white mt-2 text-center"
             style={{ fontFamily: "Helvetica, Arial, sans-serif" }}
           >
@@ -85,10 +88,13 @@ export default function ResetPassword() {
           </p>
         </div>
 
-        <form className="w-full flex flex-col gap-6" onSubmit={handleResetPassword}>
+        <form
+          className="w-full flex flex-col gap-6"
+          onSubmit={handleResetPassword}
+        >
           <div className="relative w-full">
             <input
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -106,7 +112,7 @@ export default function ResetPassword() {
 
           <div className="relative w-full">
             <input
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               name="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -135,14 +141,10 @@ export default function ResetPassword() {
           </div>
 
           {error && (
-            <div className="text-red-400 text-sm text-center">
-              {error}
-            </div>
+            <div className="text-red-400 text-sm text-center">{error}</div>
           )}
           {success && (
-            <div className="text-green-400 text-sm text-center">
-              {success}
-            </div>
+            <div className="text-green-400 text-sm text-center">{success}</div>
           )}
 
           <div className="w-full flex flex-col items-center">
@@ -150,14 +152,14 @@ export default function ResetPassword() {
               type="submit"
               disabled={isLoading}
               className={`w-full bg-white text-black border-2 border-black py-2 rounded-md font-semibold hover:bg-gray-100 transition-colors ${
-                isLoading ? 'opacity-50' : ''
+                isLoading ? "opacity-50" : ""
               }`}
             >
-              {isLoading ? 'Resetting...' : 'Reset Password'}
+              {isLoading ? "Resetting..." : "Reset Password"}
             </button>
 
             <p className="mt-4 text-white text-sm">
-              Remember your password?{' '}
+              Remember your password?{" "}
               <a
                 to="/login"
                 className="text-redOrange underline hover:text-redOrange-dark"
