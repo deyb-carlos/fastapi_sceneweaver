@@ -10,6 +10,9 @@ const ImageGrid = ({
   onImageClick,
   onExpandPanel,
 }) => {
+  // Determine the number of images to show based on screen size
+  const imagesToShow = window.innerWidth < 640 ? storyboardImages : storyboardImages.slice(currentIndex, currentIndex + 6);
+
   return (
     <div
       className={`overflow-y-auto p-4 md:p-8 relative bg-[radial-gradient(circle_at_center,#e5e7eb_1px,transparent_1px)] bg-[length:20px_20px] ${
@@ -32,7 +35,6 @@ const ImageGrid = ({
         </button>
       )}
 
-      {/* Rest of your component remains the same */}
       {loading ? (
         <div className="text-center">Loading images...</div>
       ) : storyboardImages.length === 0 ? (
@@ -49,7 +51,7 @@ const ImageGrid = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 relative z-0">
-          {storyboardImages.slice(currentIndex, currentIndex + 6).map((image, i) => (
+          {imagesToShow.map((image, i) => (
             <div key={i} className="flex flex-col">
               <div
                 className="aspect-square overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white cursor-pointer hover:shadow-md transition-shadow"
@@ -62,7 +64,7 @@ const ImageGrid = ({
                 />
               </div>
               <div className="mt-2 p-2 text-gray-800 font-semibold text-sm bg-white rounded-lg border border-gray-100 min-h-[60px] max-h-[100px] overflow-y-auto">
-                <p className="text-xs mb-1">Caption {currentIndex + i + 1}:</p>
+                <p className="text-xs mb-1">Caption {window.innerWidth < 640 ? i + 1 : currentIndex + i + 1}:</p>
                 <p className="font-normal text-sm break-words whitespace-normal overflow-hidden">
                   {image.caption}
                 </p>
