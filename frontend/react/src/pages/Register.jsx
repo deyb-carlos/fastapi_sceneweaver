@@ -21,6 +21,7 @@ function Register() {
     policy: "",
     general: "",
   });
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
 
   const navigate = useNavigate();
 
@@ -66,7 +67,7 @@ function Register() {
     }
 
     const allowedSpecialChars = /[!@#$%^&*()_+\-{}\[\]\\|:,.<>?~]/;
-    
+
     if (!formData.password) {
       newErrors.password = "Password is required.";
       isValid = false;
@@ -403,9 +404,16 @@ function Register() {
             />
             <label htmlFor="terms" className="text-sm text-gray-400">
               By signing up, you agree to our{" "}
-              <a href="">
-                <u>Privacy policy</u>
-              </a>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowPrivacyPolicy(true);
+                }}
+                className="underline hover:text-white"
+              >
+                Privacy policy
+              </button>
             </label>
             {errors.policy && (
               <div className="mt-1 text-red-400 text-sm">{errors.policy}</div>
@@ -436,6 +444,72 @@ function Register() {
             </p>
           </div>
         </form>
+
+        {/* Privacy Policy Popup */}
+        {showPrivacyPolicy && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-black/90 border border-gray-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => setShowPrivacyPolicy(false)}
+                className="absolute top-2 left-2 text-white hover:text-gray-300 text-2xl p-2"
+              >
+                &times;
+              </button>
+              <div className="p-6 pt-12">
+                <h2 className="text-2xl font-bold mb-4">Privacy Policy</h2>
+                <div className="text-gray-300 space-y-4">
+                  <p>
+                    This Privacy Policy describes how your personal information
+                    is collected, used, and shared when you register for an
+                    account on our platform.
+                  </p>
+
+                  <h3 className="text-xl font-semibold mt-4">
+                    Information We Collect
+                  </h3>
+                  <p>
+                    When you register, we collect the following information:
+                  </p>
+                  <ul className="list-disc pl-6">
+                    <li>Username</li>
+                    <li>Email address</li>
+                    <li>Password (hashed and encrypted)</li>
+                  </ul>
+
+                  <h3 className="text-xl font-semibold mt-4">
+                    How We Use Your Information
+                  </h3>
+                  <p>We use the information we collect to:</p>
+                  <ul className="list-disc pl-6">
+                    <li>Create and manage your account</li>
+                    <li>Provide and improve our services</li>
+                    <li>Communicate with you</li>
+                  </ul>
+
+                  <h3 className="text-xl font-semibold mt-4">Data Security</h3>
+                  <p>
+                    We implement appropriate security measures to protect your
+                    personal information from unauthorized access, alteration,
+                    or disclosure.
+                  </p>
+
+                  <h3 className="text-xl font-semibold mt-4">
+                    Changes to This Policy
+                  </h3>
+                  <p>
+                    We may update this Privacy Policy from time to time. We will
+                    notify you of any changes by posting the new policy on this
+                    page.
+                  </p>
+
+                  <p className="mt-6">
+                    Last updated: {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
