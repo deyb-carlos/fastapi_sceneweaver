@@ -1,13 +1,4 @@
-from fastapi import (
-    FastAPI,
-    HTTPException,
-    Depends,
-    status,
-    BackgroundTasks,
-    Form,
-    UploadFile,
-    File,
-)
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Form, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,32 +6,26 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
-from database import SessionLocal, engine
+# Use relative import here
+from .database import SessionLocal, engine
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from schemas import (
-    UserCreate,
-    UserOut,
-    StoryboardCreate,
-    StoryboardOut,
-    StoryboardCreateNoOwner,
-    ImageOut,
-)
-import auth, database, storyboards
+# Use relative imports here
+from . import auth, database, storyboards
 from PIL import Image
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from io import BytesIO
 import random
 from typing import List, Optional
 import models
 import secrets
 import string
-from reset_password import send_reset_email
+from .reset_password import send_reset_email
 from fastapi import BackgroundTasks
-from batch_generator import generate_batch_images, generate_single_image
-from s3 import delete_image_from_s3
+from .batch_generator import generate_batch_images, generate_single_image
+from .s3 import delete_image_from_s3
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+
 import os
 
 app = FastAPI()
